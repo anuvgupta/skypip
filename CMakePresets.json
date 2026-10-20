@@ -1,0 +1,34 @@
+{
+	"version": 3,
+	"cmakeMinimumRequired": { "major": 3, "minor": 24, "patch": 0 },
+	"configurePresets": [
+		{
+			"name": "base",
+			"hidden": true,
+			"generator": "Ninja",
+			"binaryDir": "${sourceDir}/build/${presetName}",
+			"cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+		},
+		{
+			"name": "mac-release",
+			"displayName": "Release (macOS cross: clang-cl + xwin)",
+			"description": "Cross-compiles on macOS. Requires XWIN_ROOT; see README.",
+			"inherits": "base",
+			"toolchainFile": "${sourceDir}/cmake/clang-cl-xwin.cmake",
+			"condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" }
+		},
+		{
+			"name": "msvc-release",
+			"displayName": "Release (Windows: MSVC)",
+			"description": "Run from a Visual Studio 2022 x64 developer prompt.",
+			"inherits": "base",
+			"architecture": { "value": "x64", "strategy": "external" },
+			"cacheVariables": { "CMAKE_C_COMPILER": "cl", "CMAKE_CXX_COMPILER": "cl" },
+			"condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+		}
+	],
+	"buildPresets": [
+		{ "name": "mac-release", "configurePreset": "mac-release" },
+		{ "name": "msvc-release", "configurePreset": "msvc-release" }
+	]
+}
