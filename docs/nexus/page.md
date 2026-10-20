@@ -1,168 +1,124 @@
-# PiP Player - picture-in-picture videos in Skyrim
+# PiP Player - watch videos while you play
 
 ## About
 
-PiP Player plays a video in a corner of the screen while you keep playing Skyrim or Enderal. Paste a YouTube link,
-a direct video link, a livestream, or a file on your PC; it plays at the size, corner, and opacity you choose, and
-picks up where you left it next time.
+Watch YouTube videos, livestreams, or video files from your PC in a small window in the corner of the screen while you
+play Skyrim or Enderal.
 
-It is drawn inside the game's own frame, so it works in exclusive fullscreen and borderless window, on Windows and
-under CrossOver on macOS.
-
-## Features
-
-- YouTube videos and live streams, local video files, direct links (`.mp4`, `.webm`, ...), and HLS streams
-- Control panel that pauses the game: paste a link, play the clipboard, recent videos with Resume, pause, stop,
-  volume, quality, brightness, and layout settings applied live
-- On-video controls: title, play/pause, 5 second skips, seek bar; click the video to pause, drag it to another corner
-- Switch YouTube quality while playing (360p to 4K, 720p by default)
-- Remembers the last 100 videos and where you left them; resumes your last video when you load a save
-- Quick keys for pause and show/hide; all keys remappable
-- No ESP, no scripts, nothing stored in saves: add or remove it at any time
+- Works in fullscreen and windowed mode, on Windows and on a Mac with CrossOver.
+- A control panel that pauses the game while you pick a video.
+- Picks up each video where you left off, even after you quit the game, and plays your last video again when you load
+  a save.
+- Change the corner, size, opacity, brightness, volume, and YouTube quality any time.
+- Just an SKSE plugin: nothing to enable in your load order, nothing saved in your save files. You can add or remove it
+  at any time.
 
 ## Requirements
 
-- [SKSE64](https://skse.silverlock.org/) for your game version
+- [SKSE](https://skse.silverlock.org/)
 - [Address Library for SKSE Plugins](https://www.nexusmods.com/skyrimspecialedition/mods/32444) (Enderal SE already
-  includes it)
-- Skyrim Special Edition / Anniversary Edition 1.5.97, 1.6.x, or 1.7.x, or Enderal SE
-- For YouTube: yt-dlp and QuickJS (included in the "with YouTube" download, or see below)
+  comes with it)
 
 ## Installation
 
-Install with Mod Organizer 2 or Vortex, or extract the archive into your game's `Data` folder. There is no plugin to
-enable in the load order.
+1. Download **PiPPlayer with YouTube**. If it isn't listed under Files here, download
+   `PiPPlayer-<version>-with-YouTube.zip` from [GitHub](https://github.com/anuvgupta/skypip/releases/latest).
+2. Install it like any other mod with Mod Organizer 2 or Vortex. Or, without a mod manager, extract it into your
+   game's `Data` folder (the `Data` folder next to `SkyrimSE.exe`).
+3. Start the game through SKSE.
 
-### Downloads
+**Don't want YouTube?** Download **PiPPlayer** instead. It is the same mod without the YouTube tools, so it plays only
+video files and direct video links.
 
-| File | What it contains | What it plays |
-|---|---|---|
-| **PiPPlayer with YouTube** | plugin, video player (libmpv), yt-dlp, QuickJS | everything |
-| **PiPPlayer** | plugin, video player (libmpv) | local files, direct links, streams (no YouTube) |
-| **PiPPlayer YouTube Tools** | yt-dlp, QuickJS | adds YouTube to the plain PiPPlayer download |
+### Adding YouTube later
 
-All three are on the [GitHub releases page](https://github.com/anuvgupta/skypip/releases/latest).
+If you installed **PiPPlayer** and change your mind, install **PiPPlayer YouTube Tools** (under Files here, or
+`PiPPlayer-YouTube-Tools-<version>.zip` on [GitHub](https://github.com/anuvgupta/skypip/releases/latest)). It only adds
+the YouTube tools.
 
-### Getting YouTube support
+Or get the two tools yourself and put them in `Data/SKSE/Plugins/PiPPlayer`, the folder that contains `libmpv-2.dll`.
+With Mod Organizer 2, that folder is inside the PiPPlayer mod: right-click the mod and choose Open in Explorer.
 
-If you installed the plain **PiPPlayer** file, pick one:
+1. Download `yt-dlp_win.zip` from [yt-dlp's releases](https://github.com/yt-dlp/yt-dlp/releases/latest) and extract
+   everything in it into that folder (you should end up with `yt-dlp.exe` and an `_internal` folder there).
+2. Download `qjs-windows-x86_64.exe` from [QuickJS-NG's releases](https://github.com/quickjs-ng/quickjs/releases/latest),
+   put it in that folder, and rename it to `qjs.exe`.
 
-1. **Add the YouTube Tools download.** Get `PiPPlayer-YouTube-Tools-<version>.zip` from
-   [GitHub releases](https://github.com/anuvgupta/skypip/releases/latest) and install it like any mod (or extract it
-   into `Data`).
-2. **Get the two tools yourself.**
-   - `yt-dlp_win.zip` from [yt-dlp releases](https://github.com/yt-dlp/yt-dlp/releases/latest) (tested: 2026.08.19);
-     extract it so `yt-dlp.exe` and its `_internal` folder end up in the PiPPlayer folder (the single-file
-     `yt-dlp.exe` also works but starts slower)
-   - `qjs-windows-x86_64.exe` from [QuickJS-NG releases](https://github.com/quickjs-ng/quickjs/releases/latest)
-     (tested: v0.17.0); rename it to `qjs.exe`
-   - The PiPPlayer folder is `Data/SKSE/Plugins/PiPPlayer/` (where `libmpv-2.dll` is). With MO2, use that folder
-     inside the PiPPlayer mod (right-click the mod → Open in Explorer).
-3. **Use the all-in-one download.** Replace PiPPlayer with `PiPPlayer-<version>-with-YouTube.zip` from
-   [GitHub releases](https://github.com/anuvgupta/skypip/releases/latest).
+## Watch your first video
 
-Without the tools, YouTube links show a message pointing here; everything else plays normally.
+1. Load a save and press **Left Bracket**. The game pauses, a mouse cursor appears, and the control panel opens.
+2. Click the box at the top of the panel, paste a link with **Ctrl+V**, and press **Play**. Any of these work:
+   - a YouTube link
+   - a link that ends in a video file, like `.mp4` or `.webm`
+   - a video file on your PC, like `C:\Users\you\Videos\clip.mp4`
+3. Press **Left Bracket** or **Esc** to close the panel. The game unpauses and the video keeps playing in the corner.
 
-### Files
+YouTube videos take a few seconds to start. Only public videos work: private, age-restricted, and members-only videos
+do not play.
 
-```
-Data/SKSE/Plugins/PiPPlayer.dll
-Data/SKSE/Plugins/PiPPlayer.ini
-Data/SKSE/Plugins/PiPPlayer/libmpv-2.dll
-Data/SKSE/Plugins/PiPPlayer/yt-dlp.exe      (YouTube)
-Data/SKSE/Plugins/PiPPlayer/_internal/      (YouTube, yt-dlp's files)
-Data/SKSE/Plugins/PiPPlayer/qjs.exe         (YouTube)
-```
+## Keys
 
-## How to use
-
-1. Load a save and press `[` to open the control panel. The game pauses and a mouse cursor appears.
-2. Paste a link (Ctrl+V) into the box and press **Play**, or copy a link first and press **Play clipboard**, or pick
-   a video from **Recent** and press **Resume**.
-3. Press `[`, Esc, or the panel's X to close it. The video keeps playing in its corner while you play.
-
-While the panel is open, the video shows its title, a play/pause button, 5 second skip buttons, and a seek bar.
-Click the video to pause it, or drag it to move it to another corner.
-
-### Controls
-
-| Key | Action |
+| Key | What it does |
 |---|---|
 | `[` | Open or close the control panel |
-| `]` | Pause or resume |
-| `\` | Show or hide the player |
-| Esc | Close the control panel |
+| `]` | Pause or resume the video |
+| `\` | Show or hide the video |
 
-These are the three keys right of P on a US keyboard; on other layouts the same physical keys are used. On a Mac
-under CrossOver, Cmd+V also pastes in the panel when CrossOver passes Cmd through.
+These are the three keys to the right of P on a US keyboard. On other keyboard layouts, use the same three keys even if
+they are labeled differently. You can change them in the settings file (see below).
 
-## Configuration
+## The control panel
 
-Most settings are in the control panel and are saved automatically. Everything else is in
-`Data/SKSE/Plugins/PiPPlayer.ini` (edit it while the game is closed).
+Open it with **Left Bracket**. Everything you change here is saved automatically.
 
-| Setting | Default | |
-|---|---|---|
-| `[Overlay] Corner` | `BottomLeft` | `TopLeft`, `TopRight`, `BottomLeft`, `BottomRight` |
-| `Width` | `480` | video width in pixels at the game's resolution |
-| `MarginX`, `MarginY` | `24` | distance from the screen edges |
-| `Opacity` | `1.0` | `0.05` to `1.0` |
-| `Brightness` | `0` | `-100` (darker) to `100` (brighter) |
-| `CornerRadius` | `6` | `0` for square corners |
-| `[Playback] Volume` | `50` | `0` to `100` |
-| `Loop` | `false` | repeat the video |
-| `Url` | empty | starting text of the panel's link box |
-| `YouTubeMaxHeight` | `720` | highest YouTube quality (`0` = best); lower uses less CPU |
-| `YouTubeSolver` | `Always` | QuickJS for YouTube lookups: `Always`, `Fallback` (retry with it only when a lookup fails; faster), or `Off` |
-| `ResumeOnStart` | `true` | play the last video when a save loads |
-| `[Hotkeys] TogglePanel`, `TogglePause`, `ToggleVisible` | `[`, `]`, `\` | key names (`F8`, `Home`, `K`, `Numpad5`, ...) or DirectInput codes |
+- **Play / Play clipboard**: play the link in the box, or the link you last copied.
+- **Recent**: your last 100 videos. Pick one and press **Resume** to continue where you left off.
+- **Pause, Stop, Volume**.
+- **Quality**: switch the playing YouTube video's quality. Lower quality is easier on your computer.
+- **YouTube lookup**: leave it on **Reliable**. **Faster** starts YouTube videos about a second sooner, but a few
+  videos may then take longer while it retries.
+- **Update yt-dlp**: press this if YouTube videos stop playing. YouTube changes often, and an update usually fixes it.
+- **Corner, Size, Opacity, Brightness, Margins**: where the video sits and how it looks.
 
-The game log `Documents/My Games/Skyrim Special Edition/SKSE/PiPPlayer.log` warns if one of your keys is also bound
-to a game control.
+While the panel is open, the video also has its own controls: a play/pause button, 5 second skip buttons, and a seek
+bar. Click the video to pause it, or drag it to another corner.
 
-## YouTube notes
+## Settings file
 
-- A YouTube link takes a few seconds to start while yt-dlp looks it up.
-- Private, age-restricted, and members-only videos do not play (there is no sign-in).
-- YouTube changes often break older yt-dlp versions. If YouTube links stop working, press **Update yt-dlp** in the
-  control panel.
-- yt-dlp streams the video for personal viewing; downloading from YouTube is against YouTube's terms of service.
+Most settings are in the control panel. A few more are in `Data/SKSE/Plugins/PiPPlayer.ini`, which you can open with
+Notepad. Close the game before editing it.
 
-## Resume
-
-Every video picks up where you left it. The last 100 videos and their positions are kept in
-`Documents/My Games/Skyrim Special Edition/SKSE/PiPPlayer_History.txt`. Positions in the first 10 seconds or the last
-15 seconds start the video over.
+| Setting | What it does |
+|---|---|
+| `ResumeOnStart=true` | Set to `false` to stop your last video from playing when you load a save. |
+| `Loop=false` | Set to `true` to replay a video when it ends. |
+| `CornerRadius=6` | How rounded the video's corners are. `0` makes them square. |
+| `TogglePanel`, `TogglePause`, `ToggleVisible` | The keys. Use a key name such as `F8`, `Home`, `K`, or `Numpad5`. |
 
 ## Compatibility
 
-- **Game versions:** Skyrim SE/AE 1.5.97, 1.6.x, 1.7.x; tested on Enderal SE (1.7.104). Not for Skyrim VR or LE.
-- **Enderal SE:** supported; Enderal already includes Address Library.
-- **macOS (CrossOver):** supported and tested. Video decodes on the CPU there; lower `YouTubeMaxHeight` if the game
-  slows down.
-- **SSE Display Tweaks:** compatible.
-- **ENB, ReShade, Community Shaders:** not tested yet; reports welcome.
-- Load order: none (no ESP).
-
-## Known limitations
-
-- Video controls appear while the control panel is open, not over game menus.
-- No gamepad support yet.
-- An audio-only file shows "Buffering..." because it has no picture.
+- **Skyrim Special Edition and Anniversary Edition** and **Enderal SE**. Not for Skyrim VR or the
+  original 2011 Skyrim.
+- **Mac with CrossOver:** works. Videos use more CPU there; if the game slows down, pick a lower Quality. A faint click
+  can sometimes be heard while a YouTube video is being looked up.
+- **SSE Display Tweaks:** works.
+- **ENB, ReShade, Community Shaders:** not tested yet; let me know how it goes.
 
 ## Troubleshooting
 
-- **Nothing happens when I press `[`:** check `Documents/My Games/Skyrim Special Edition/SKSE/skse64.log` for
-  `PiPPlayer.dll ... loaded correctly`. If it is missing, check SKSE and Address Library.
-- **A key does something in the game too:** see `PiPPlayer.log` for conflicts and pick another key in the INI.
-- **YouTube says it needs the YouTube tools:** see "Getting YouTube support" above.
-- **YouTube stopped working:** press **Update yt-dlp** in the control panel.
-- Anything else: attach `PiPPlayer.log` when you report it.
+- **Nothing happens when I press Left Bracket.** Make sure you started the game through SKSE, and that Address Library
+  is installed.
+- **A key also does something in the game.** Change the key in the settings file.
+- **YouTube links say I need the YouTube tools.** You installed the version without YouTube; see "Adding YouTube
+  later".
+- **YouTube videos stopped playing.** Open the panel and press **Update yt-dlp**.
+- **Something else.** Post in the comments with the log file
+  `Documents/My Games/Skyrim Special Edition/SKSE/PiPPlayer.log` attached.
 
 ## Uninstall
 
 Remove the mod in your mod manager, or delete `PiPPlayer.dll`, `PiPPlayer.ini`, and the `PiPPlayer` folder from
-`Data/SKSE/Plugins`. Safe at any time.
+`Data/SKSE/Plugins`. You can do this at any time.
 
 ## Credits and licenses
 
@@ -176,5 +132,5 @@ PiP Player is MIT licensed. It uses:
   DirectXMath/DirectXTK (MIT), [xbyak](https://github.com/herumi/xbyak) (BSD-3),
   [rapidcsv](https://github.com/d99kris/rapidcsv) (BSD-3)
 
-Full notices are in `Data/SKSE/Plugins/PiPPlayer/THIRD_PARTY_NOTICES.txt`. Source:
+Full notices are in `Data/SKSE/Plugins/PiPPlayer/THIRD_PARTY_NOTICES.txt`. Source code:
 [github.com/anuvgupta/skypip](https://github.com/anuvgupta/skypip).

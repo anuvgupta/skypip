@@ -121,7 +121,7 @@ namespace PiP::Panel
 			const float resumeWidth = ImGui::CalcTextSize("Resume").x + style.FramePadding.x * 2.0F;
 			ImGui::AlignTextToFramePadding();
 			ImGui::TextUnformatted("Recent");
-			ImGui::SameLine(96.0F * Overlay::Scale());
+			ImGui::SameLine(124.0F * Overlay::Scale());
 			ImGui::SetNextItemWidth(-(resumeWidth + style.ItemSpacing.x));
 			if (ImGui::BeginCombo("##recent", RecentLabel(*selected).c_str())) {
 				for (std::size_t i = 0; i < items.size(); ++i) {
@@ -354,7 +354,7 @@ namespace PiP::Panel
 		{
 			ImGui::AlignTextToFramePadding();
 			ImGui::TextUnformatted(a_label);
-			ImGui::SameLine(96.0F * Overlay::Scale());
+			ImGui::SameLine(124.0F * Overlay::Scale());
 			ImGui::SetNextItemWidth(-FLT_MIN);
 		}
 
@@ -385,12 +385,12 @@ namespace PiP::Panel
 			                             "Highest quality requested for YouTube videos");
 
 			constexpr std::tuple<const char*, YouTubeSolver, const char*> solvers[]{
-				{ "Always", YouTubeSolver::Always, "Every lookup uses QuickJS (most reliable)" },
-				{ "Fallback", YouTubeSolver::Fallback, "Skip QuickJS, retry with it if a lookup fails (faster)" },
-				{ "Off", YouTubeSolver::Off, "Never use QuickJS (fastest; some videos may fail)" },
+				{ "Reliable", YouTubeSolver::Always, "Always uses QuickJS for YouTube (recommended)" },
+				{ "Faster", YouTubeSolver::Fallback, "Tries without QuickJS first; about 1-2 s faster, retries if needed" },
+				{ "Fastest", YouTubeSolver::Off, "Never uses QuickJS; some videos may not play" },
 			};
 			const auto current = std::ranges::find(solvers, a_settings.youTubeSolver, [](const auto& a_entry) { return std::get<1>(a_entry); });
-			Row("JS solver");
+			Row("YouTube lookup");
 			if (ImGui::BeginCombo("##youtube-solver", std::get<0>(*current))) {
 				for (const auto& [label, solver, description] : solvers) {
 					if (ImGui::Selectable(label, solver == a_settings.youTubeSolver)) {
@@ -401,7 +401,7 @@ namespace PiP::Panel
 				}
 				ImGui::EndCombo();
 			}
-			ImGui::SetItemTooltip("How YouTube lookups use QuickJS, which solves YouTube's JavaScript challenge");
+			ImGui::SetItemTooltip("How YouTube links are looked up: Reliable always works best; Faster starts videos sooner");
 
 			ImGui::BeginDisabled(YouTube::IsUpdating());
 			if (ImGui::Button("Update yt-dlp")) {

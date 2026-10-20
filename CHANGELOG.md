@@ -4,8 +4,7 @@
 
 - New `YouTubeSolver` setting (INI and control panel) for how YouTube lookups use QuickJS: `Always` (default),
   `Fallback` (look up without it and retry a failed lookup with it; about 1-2 s faster under CrossOver), or `Off`.
-- Known issue: under CrossOver a brief click can still be heard while a YouTube link is looked up
-  ([#4](https://github.com/anuvgupta/skypip/issues/4)).
+- Known issue: under CrossOver a brief click can still be heard while a YouTube link is looked up.
 
 ## 1.0.1 - 2026-10-19
 
@@ -14,8 +13,7 @@
   (48 kHz stereo) and the volume ramps around video changes.
 - Brightness control in the control panel and the INI (`Brightness`, -100 to 100).
 - Bundles yt-dlp's folder build (`yt-dlp.exe` + `_internal`), which starts faster than the single-file executable.
-- Known issue: under CrossOver a brief click can be heard while a YouTube link is looked up
-  ([#4](https://github.com/anuvgupta/skypip/issues/4)).
+- Known issue: under CrossOver a brief click can be heard while a YouTube link is looked up.
 
 ## 1.0.0 - 2026-10-19
 
