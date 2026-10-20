@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.3 - 2026-10-19
+
+- The control panel calls the YouTube setting **YouTube lookup** with the choices **Reliable** (default), **Faster**,
+  and **Fastest** instead of JS solver / Always / Fallback / Off. The INI values are unchanged.
+- Rewritten README and mod page: which download to pick, how to watch your first video, the keys, the control panel,
+  and troubleshooting.
+
 ## 1.0.2 - 2026-10-19
 
 - New `YouTubeSolver` setting (INI and control panel) for how YouTube lookups use QuickJS: `Always` (default),

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 
 project(
 	PiPPlayer
-	VERSION 1.0.2
+	VERSION 1.0.3
 	DESCRIPTION "Picture-in-picture video player for Skyrim SE / Enderal SE"
 	LANGUAGES C CXX
 )
