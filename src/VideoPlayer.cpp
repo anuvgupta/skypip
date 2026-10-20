@@ -1,0 +1,770 @@
+#include "VideoPlayer.h"
+
+#include <charconv>
+
+#include "History.h"
+#include "Mpv.h"
+#include "Paths.h"
+#include "Settings.h"
+#include "YouTube.h"
+
+namespace PiP::VideoPlayer
+{
+	namespace
+	{
+		// mpv's software renderer wants 64-byte aligned rows and buffers.
+		class FrameBuffer
+		{
+		public:
+			void Resize(int a_width, int a_height)
+			{
+				width = a_width;
+				height = a_height;
+				stride = (static_cast<std::size_t>(a_width) * 4 + 63) & ~std::size_t{ 63 };
+				const auto size = stride * static_cast<std::size_t>(a_height);
+				if (size > _capacity) {
+					_storage.reset(static_cast<std::uint8_t*>(::_aligned_malloc(size, 64)));
+					_capacity = _storage ? size : 0;
+				}
+			}
+
+			[[nodiscard]] std::uint8_t* data() const noexcept { return _storage.get(); }
+			[[nodiscard]] bool          valid() const noexcept { return width > 0 && _storage; }
+
+			int         width{ 0 };
+			int         height{ 0 };
+			std::size_t stride{ 0 };
+
+		private:
+			struct AlignedFree
+			{
+				void operator()(std::uint8_t* a_ptr) const noexcept { ::_aligned_free(a_ptr); }
+			};
+
+			std::unique_ptr<std::uint8_t, AlignedFree> _storage;
+			std::size_t                                _capacity{ 0 };
+		};
+
+		// Wine (CrossOver, Proton) has no D3D11/DXVA2 video decoding; probing for it only fails noisily.
+		bool RunningUnderWine()
+		{
+			const HMODULE ntdll = ::GetModuleHandleW(L"ntdll.dll");
+			return ntdll && ::GetProcAddress(ntdll, "wine_get_version");
+		}
+
+		std::string_view EndReasonName(mpv_end_file_reason a_reason)
+		{
+			switch (a_reason) {
+			case MPV_END_FILE_REASON_EOF:
+				return "end of file"sv;
+			case MPV_END_FILE_REASON_STOP:
+				return "stopped"sv;
+			case MPV_END_FILE_REASON_QUIT:
+				return "quit"sv;
+			case MPV_END_FILE_REASON_ERROR:
+				return "error"sv;
+			case MPV_END_FILE_REASON_REDIRECT:
+				return "redirect"sv;
+			default:
+				return "unknown"sv;
+			}
+		}
+
+		// YouTube stream links expire after about six hours; switching tracks after that needs a fresh lookup.
+		constexpr auto kStreamLinkLifetime = std::chrono::hours(5);
+
+		// The ytdl hook lists every YouTube format as an edition titled like
+		// "298 - 1280x720 (720p60) (h264 60 fps 1897 kbps)"; switching editions only switches streams.
+		struct Edition
+		{
+			std::int64_t id{ 0 };
+			int          height{ 0 };
+			int          codecRank{ 3 };  // h264, vp9, av1, other: cheapest to decode first
+			bool         labeled{ false };  // has YouTube's "(720p)" label; unlabeled ones are HLS variants
+			int          kbps{ 0 };
+		};
+
+		std::optional<Edition> ParseEdition(std::int64_t a_id, std::string_view a_title)
+		{
+			Edition edition{ .id = a_id };
+			// Height: the number after "<width>x".
+			for (std::size_t x = a_title.find('x'); x != std::string_view::npos; x = a_title.find('x', x + 1)) {
+				if (x == 0 || !std::isdigit(static_cast<unsigned char>(a_title[x - 1]))) {
+					continue;
+				}
+				int height = 0;
+				const auto [end, error] = std::from_chars(a_title.data() + x + 1, a_title.data() + a_title.size(), height);
+				if (error == std::errc{} && height > 0) {
+					edition.height = height;
+					break;
+				}
+			}
+			if (edition.height == 0) {
+				return std::nullopt;
+			}
+			constexpr std::pair<std::string_view, int> codecs[]{ { "(h264", 0 }, { "(vp9", 1 }, { "(av1", 2 } };
+			for (const auto& [codec, rank] : codecs) {
+				if (a_title.find(codec) != std::string_view::npos) {
+					edition.codecRank = rank;
+					break;
+				}
+			}
+			edition.labeled = a_title.find(std::format("({}p", edition.height)) != std::string_view::npos;
+			if (const auto kbps = a_title.rfind(" kbps"); kbps != std::string_view::npos) {
+				auto start = a_title.find_last_not_of("0123456789", kbps - 1);
+				start = start == std::string_view::npos ? 0 : start + 1;
+				std::from_chars(a_title.data() + start, a_title.data() + kbps, edition.kbps);
+			}
+			return edition;
+		}
+
+		std::string_view NodeString(const mpv_node& a_node)
+		{
+			return a_node.format == MPV_FORMAT_STRING && a_node.u.string ? std::string_view(a_node.u.string) : std::string_view{};
+		}
+
+		// What the player is doing before mpv reports the file loaded.
+		std::string OpeningMessage(std::string_view a_source)
+		{
+			if (YouTube::Available() && YouTube::IsYouTubeLink(a_source)) {
+				return "Looking up video on YouTube...";
+			}
+			const bool web = a_source.starts_with("http://") || a_source.starts_with("https://");
+			return web ? "Opening link..." : "Opening file...";
+		}
+
+		enum PropertyId : std::uint64_t
+		{
+			kDisplayWidth = 1,
+			kDisplayHeight,
+			kPause,
+			kPosition,
+			kDuration,
+			kEditions,
+			kCurrentEdition,
+			kPath,
+			kTitle,
+			kBuffering,
+			kBufferPercent,
+		};
+
+		class Player
+		{
+		public:
+			// Never destroyed: the worker thread runs until the game exits.
+			static Player& Get()
+			{
+				static auto* player = new Player();
+				return *player;
+			}
+
+			void Post(std::function<void()> a_command)
+			{
+				{
+					std::scoped_lock lock(_queueMutex);
+					_commands.push_back(std::move(a_command));
+				}
+				std::call_once(_started, [this] { std::thread(&Player::Run, this).detach(); });
+				Wake();
+			}
+
+			void Play(std::string a_source)
+			{
+				if (YouTube::IsYouTubeLink(a_source) && !YouTube::Available()) {
+					logger::warn("{} is missing; cannot play {}", Paths::ToUtf8(YouTube::Executable()), a_source);
+					SetStatus(State::Error,
+						"YouTube links need the YouTube tools (yt-dlp.exe and qjs.exe) in Data/SKSE/Plugins/PiPPlayer. "
+						"See the mod page for downloads.");
+					return;
+				}
+				SetStatus(State::Loading, OpeningMessage(a_source));
+				Post([this, source = std::move(a_source)] {
+					if (!_mpv) {
+						SetStatus(State::Error, _loadError);
+						return;
+					}
+					const double resume = History::ResumePosition(source);
+					logger::info("Playing {}{}", source, resume > 0.0 ? std::format(" from {:.0f} s", resume) : std::string{});
+					LoadFile(source, resume);
+				});
+			}
+
+			void TogglePause() { Command({ "cycle", "pause" }); }
+			void Stop() { Command({ "stop" }); }
+			void SeekBy(double a_seconds) { Command({ "seek", std::format("{:.3f}", a_seconds), "relative" }); }
+			void SeekTo(double a_fraction) { Command({ "seek", std::format("{:.3f}", std::clamp(a_fraction, 0.0, 1.0) * 100.0), "absolute-percent" }); }
+			void SetVolume(int a_volume) { Command({ "set", "volume", std::to_string(std::clamp(a_volume, 0, 100)) }); }
+
+			void SelectQuality(int a_height)
+			{
+				Post([this, a_height] {
+					if (!_mpv) {
+						return;
+					}
+					RunCommand({ "set", "ytdl-format", YouTube::FormatFor(a_height) });
+
+					const auto* edition = PickEdition(a_height);
+					if (!edition || edition->id == _currentEdition) {
+						return;
+					}
+					if (std::chrono::steady_clock::now() - _loadedAt > kStreamLinkLifetime) {
+						logger::info("Reloading {} for {}p (stream links expired)", _currentPath, edition->height);
+						LoadFile(_currentPath, _position);
+					} else {
+						logger::info("Switching to {}p (edition {})", edition->height, edition->id);
+						RunCommand({ "set", "edition", std::to_string(edition->id) });
+					}
+				});
+			}
+
+			// Runs an mpv command asynchronously on the worker thread; ignored until libmpv is loaded.
+			void Command(std::vector<std::string> a_args)
+			{
+				Post([this, args = std::move(a_args)] {
+					if (_mpv) {
+						RunCommand(args);
+					}
+				});
+			}
+
+			void ShowNotice(std::string a_message)
+			{
+				std::scoped_lock lock(_statusMutex);
+				if (_status.state != State::Playing && _status.state != State::Paused && _status.state != State::Loading) {
+					_status.state = State::Idle;
+					_status.message = std::move(a_message);
+				}
+			}
+
+			Status GetStatus()
+			{
+				std::scoped_lock lock(_statusMutex);
+				return _status;
+			}
+
+			void ConsumeFrame(std::uint64_t& a_sequence, const std::function<void(const FrameView&)>& a_upload)
+			{
+				std::scoped_lock lock(_frameMutex);
+				if (a_sequence == _frameSequence) {
+					return;
+				}
+				a_sequence = _frameSequence;
+				a_upload(FrameView{ _front.width, _front.height, _front.stride, _front.data() });
+			}
+
+		private:
+			static void OnWakeup(void* a_self) { static_cast<Player*>(a_self)->Wake(); }
+
+			void Wake()
+			{
+				{
+					std::scoped_lock lock(_queueMutex);
+					_wake = true;
+				}
+				_wakeCondition.notify_one();
+			}
+
+			void Run()
+			{
+				Initialize();
+
+				for (;;) {
+					std::deque<std::function<void()>> commands;
+					{
+						std::unique_lock lock(_queueMutex);
+						_wakeCondition.wait(lock, [this] { return _wake || !_commands.empty(); });
+						_wake = false;
+						commands.swap(_commands);
+					}
+
+					for (auto& command : commands) {
+						command();
+					}
+					if (!_mpv) {
+						continue;
+					}
+
+					DrainEvents();
+					if (_api->mpv_render_context_update(_render) & MPV_RENDER_UPDATE_FRAME) {
+						RenderFrame();
+					}
+				}
+			}
+
+			void Initialize()
+			{
+				_api = Mpv::Load(_loadError);
+				if (!_api) {
+					logger::error("{}", _loadError);
+					return;
+				}
+
+				_mpv = _api->mpv_create();
+				if (!_mpv) {
+					Fail("mpv_create failed");
+					return;
+				}
+
+				const auto& settings = Settings::Get();
+				SetOption("vo", "libmpv");
+				const bool wine = RunningUnderWine();
+				SetOption("hwdec", wine ? "no" : "auto-copy");
+				SetOption("video-timing-offset", "0");
+				SetOption("keep-open", "yes");
+				SetOption("osd-level", "0");
+				SetOption("audio-client-name", "PiPPlayer");
+				SetOption("volume", std::to_string(settings.volume).c_str());
+				SetOption("loop-file", settings.loop ? "inf" : "no");
+				if (YouTube::Available()) {
+					// QuickJS (qjs.exe) sits next to yt-dlp.exe, where yt-dlp finds it.
+					SetOption("ytdl", "yes");
+					SetOption("script-opts", std::format("ytdl_hook-ytdl_path={}", Paths::ToUtf8(YouTube::Executable())).c_str());
+					SetOption("ytdl-raw-options", "no-config=,js-runtimes=quickjs");
+					SetOption("ytdl-format", YouTube::FormatFor(settings.youTubeMaxHeight).c_str());
+				} else {
+					logger::warn("{} is missing; YouTube links will not play", Paths::ToUtf8(YouTube::Executable()));
+					SetOption("ytdl", "no");
+				}
+
+				if (const auto error = _api->mpv_initialize(_mpv); error < 0) {
+					Fail(std::format("mpv_initialize failed: {}", _api->mpv_error_string(error)));
+					return;
+				}
+
+				mpv_render_param params[]{
+					{ MPV_RENDER_PARAM_API_TYPE, const_cast<char*>(MPV_RENDER_API_TYPE_SW) },
+					{ MPV_RENDER_PARAM_INVALID, nullptr },
+				};
+				if (const auto error = _api->mpv_render_context_create(&_render, _mpv, params); error < 0) {
+					Fail(std::format("mpv_render_context_create failed: {}", _api->mpv_error_string(error)));
+					return;
+				}
+
+				_api->mpv_request_log_messages(_mpv, "info");
+				_api->mpv_observe_property(_mpv, kDisplayWidth, "dwidth", MPV_FORMAT_INT64);
+				_api->mpv_observe_property(_mpv, kDisplayHeight, "dheight", MPV_FORMAT_INT64);
+				_api->mpv_observe_property(_mpv, kPause, "pause", MPV_FORMAT_FLAG);
+				_api->mpv_observe_property(_mpv, kPosition, "time-pos", MPV_FORMAT_DOUBLE);
+				_api->mpv_observe_property(_mpv, kDuration, "duration", MPV_FORMAT_DOUBLE);
+				_api->mpv_observe_property(_mpv, kEditions, "edition-list", MPV_FORMAT_NODE);
+				_api->mpv_observe_property(_mpv, kCurrentEdition, "current-edition", MPV_FORMAT_INT64);
+				_api->mpv_observe_property(_mpv, kPath, "path", MPV_FORMAT_STRING);
+				_api->mpv_observe_property(_mpv, kTitle, "media-title", MPV_FORMAT_STRING);
+				_api->mpv_observe_property(_mpv, kBuffering, "paused-for-cache", MPV_FORMAT_FLAG);
+				_api->mpv_observe_property(_mpv, kBufferPercent, "cache-buffering-state", MPV_FORMAT_INT64);
+				_api->mpv_set_wakeup_callback(_mpv, OnWakeup, this);
+				_api->mpv_render_context_set_update_callback(_render, OnWakeup, this);
+
+				logger::info("libmpv initialized (hardware decoding {})", wine ? "off under Wine" : "auto-copy");
+			}
+
+			// Worker thread only.
+			void RunCommand(const std::vector<std::string>& a_args)
+			{
+				std::vector<const char*> argv;
+				for (const auto& arg : a_args) {
+					argv.push_back(arg.c_str());
+				}
+				argv.push_back(nullptr);
+				Check(_api->mpv_command_async(_mpv, 0, argv.data()), a_args.front());
+			}
+
+			void LoadFile(const std::string& a_source, double a_start)
+			{
+				if (a_start > 0.0) {
+					RunCommand({ "loadfile", a_source, "replace", "-1", std::format("start={:.3f}", a_start) });
+				} else {
+					RunCommand({ "loadfile", a_source, "replace" });
+				}
+			}
+
+			// The a_height edition (0 = the tallest): YouTube's labeled formats first, then the codec cheapest to decode,
+			// then the lowest bitrate.
+			const Edition* PickEdition(int a_height) const
+			{
+				int target = a_height;
+				if (target <= 0) {
+					for (const auto& edition : _editions) {
+						target = std::max(target, edition.height);
+					}
+				}
+				const Edition* best = nullptr;
+				const auto     key = [](const Edition& a_edition) { return std::tuple(!a_edition.labeled, a_edition.codecRank, a_edition.kbps); };
+				for (const auto& edition : _editions) {
+					if (edition.height == target && (!best || key(edition) < key(*best))) {
+						best = &edition;
+					}
+				}
+				return best;
+			}
+
+			void OnEditionList(const mpv_node& a_list)
+			{
+				_editions.clear();
+				if (a_list.format == MPV_FORMAT_NODE_ARRAY && a_list.u.list) {
+					for (int i = 0; i < a_list.u.list->num; ++i) {
+						const auto& entry = a_list.u.list->values[i];
+						if (entry.format != MPV_FORMAT_NODE_MAP || !entry.u.list) {
+							continue;
+						}
+						std::int64_t     id = -1;
+						std::string_view title;
+						for (int k = 0; k < entry.u.list->num; ++k) {
+							const std::string_view key = entry.u.list->keys[k];
+							const auto&            value = entry.u.list->values[k];
+							if (key == "id" && value.format == MPV_FORMAT_INT64) {
+								id = value.u.int64;
+							} else if (key == "title") {
+								title = NodeString(value);
+							}
+						}
+						if (auto edition = ParseEdition(id, title); id >= 0 && edition) {
+							_editions.push_back(*edition);
+						}
+					}
+				}
+				PublishQualities();
+			}
+
+			void PublishQualities()
+			{
+				std::vector<int> heights;
+				int              current = 0;
+				for (const auto& edition : _editions) {
+					heights.push_back(edition.height);
+					if (edition.id == _currentEdition) {
+						current = edition.height;
+					}
+				}
+				std::ranges::sort(heights, std::greater{});
+				heights.erase(std::ranges::unique(heights).begin(), heights.end());
+				if (heights.size() < 2) {
+					heights.clear();
+				}
+
+				std::scoped_lock lock(_statusMutex);
+				_status.videoHeight = current;
+				_status.qualities = std::move(heights);
+			}
+
+			void Fail(std::string a_error)
+			{
+				logger::error("{}", a_error);
+				_loadError = std::move(a_error);
+				if (_render) {
+					_api->mpv_render_context_free(_render);
+					_render = nullptr;
+				}
+				if (_mpv) {
+					_api->mpv_terminate_destroy(_mpv);
+					_mpv = nullptr;
+				}
+			}
+
+			void SetOption(const char* a_name, const char* a_value)
+			{
+				if (const auto error = _api->mpv_set_option_string(_mpv, a_name, a_value); error < 0) {
+					logger::warn("mpv option {}={} rejected: {}", a_name, a_value, _api->mpv_error_string(error));
+				}
+			}
+
+			void Check(int a_error, std::string_view a_what)
+			{
+				if (a_error < 0) {
+					logger::error("mpv {} failed: {}", a_what, _api->mpv_error_string(a_error));
+					SetStatus(State::Error, std::format("Could not play: {}", _api->mpv_error_string(a_error)));
+				}
+			}
+
+			void DrainEvents()
+			{
+				for (;;) {
+					const auto* event = _api->mpv_wait_event(_mpv, 0);
+					switch (event->event_id) {
+					case MPV_EVENT_NONE:
+						return;
+					case MPV_EVENT_START_FILE:
+						_ytdlError.clear();
+						// Keep the display size: mpv only reports dwidth/dheight when they change, so a next file
+						// of the same size sends no update.
+						logger::info("mpv: opening");
+						ClearFrame();
+						_awaitingFrame = true;
+						if (GetStatus().state != State::Loading) {  // Play() already said what is being opened
+							SetStatus(State::Loading, "Opening...");
+						}
+						break;
+					case MPV_EVENT_FILE_LOADED:
+						logger::info("mpv: loaded");
+						_loadedAt = std::chrono::steady_clock::now();
+						// The first picture still needs the stream connected, buffered, and decoded.
+						SetStatus(_paused ? State::Paused : State::Playing, "Buffering...");
+						break;
+					case MPV_EVENT_END_FILE:
+						OnEndFile(*static_cast<const mpv_event_end_file*>(event->data));
+						break;
+					case MPV_EVENT_PROPERTY_CHANGE:
+						OnPropertyChange(event->reply_userdata, *static_cast<const mpv_event_property*>(event->data));
+						break;
+					case MPV_EVENT_LOG_MESSAGE:
+						{
+							const auto& message = *static_cast<const mpv_event_log_message*>(event->data);
+							std::string_view text = message.text;
+							while (!text.empty() && (text.back() == '\n' || text.back() == '\r')) {
+								text.remove_suffix(1);
+							}
+							const auto level = message.log_level <= MPV_LOG_LEVEL_ERROR ? spdlog::level::err :
+							                   message.log_level == MPV_LOG_LEVEL_WARN  ? spdlog::level::warn :
+							                                                              spdlog::level::info;
+							spdlog::log(level, "mpv [{}] {}", message.prefix, text);
+							// The ytdl hook explains a failed YouTube load only in its log; keep it for the status.
+							if (message.log_level <= MPV_LOG_LEVEL_ERROR && std::string_view(message.prefix) == "ytdl_hook"sv) {
+								_ytdlError = text;
+							}
+						}
+						break;
+					default:
+						break;
+					}
+				}
+			}
+
+			void OnEndFile(const mpv_event_end_file& a_endFile)
+			{
+				logger::info("mpv: ended ({})", EndReasonName(a_endFile.reason));
+				if (a_endFile.reason == MPV_END_FILE_REASON_EOF) {
+					History::Record(_currentPath, _duration, _duration, _title);  // finished: next time starts over
+				}
+				History::Save(true);
+				if (a_endFile.reason == MPV_END_FILE_REASON_ERROR) {
+					const auto* reason = _api->mpv_error_string(a_endFile.error);
+					logger::error("Playback failed: {}", reason);
+					ClearFrame();
+					SetStatus(State::Error, _ytdlError.empty() ? std::format("Could not play: {}", reason) : std::format("YouTube: {}", _ytdlError));
+				} else if (a_endFile.reason != MPV_END_FILE_REASON_REDIRECT && GetStatus().state != State::Loading) {
+					ClearFrame();
+					SetStatus(State::Idle, "");
+				}
+			}
+
+			void OnPropertyChange(std::uint64_t a_id, const mpv_event_property& a_property)
+			{
+				if (a_id == kPosition || a_id == kDuration) {
+					const double value = a_property.format == MPV_FORMAT_DOUBLE ? *static_cast<const double*>(a_property.data) : 0.0;
+					(a_id == kPosition ? _position : _duration) = value;
+					{
+						std::scoped_lock lock(_statusMutex);
+						(a_id == kPosition ? _status.position : _status.duration) = value;
+					}
+					if (a_id == kPosition && value > 0.0) {
+						History::Record(_currentPath, _position, _duration, _title);
+						History::Save(false);
+					}
+					return;
+				}
+				if (a_id == kEditions) {
+					OnEditionList(a_property.format == MPV_FORMAT_NODE ? *static_cast<const mpv_node*>(a_property.data) : mpv_node{});
+					return;
+				}
+				if (a_id == kCurrentEdition) {
+					_currentEdition = a_property.format == MPV_FORMAT_INT64 ? *static_cast<const std::int64_t*>(a_property.data) : -1;
+					PublishQualities();
+					return;
+				}
+				if (a_id == kPath) {
+					History::Save(true);  // the previous file's last position
+					_currentPath = a_property.format == MPV_FORMAT_STRING ? *static_cast<char* const*>(a_property.data) : "";
+					_duration = 0.0;
+					// _title is kept: mpv sends media-title for the new file separately, possibly before the path.
+					return;
+				}
+				if (a_id == kBuffering) {
+					std::scoped_lock lock(_statusMutex);
+					_status.buffering = a_property.format == MPV_FORMAT_FLAG && *static_cast<const int*>(a_property.data) != 0;
+					return;
+				}
+				if (a_id == kBufferPercent) {
+					if (_awaitingFrame && a_property.format == MPV_FORMAT_INT64) {
+						std::scoped_lock lock(_statusMutex);
+						if (_status.state == State::Playing || _status.state == State::Paused) {
+							_status.message = std::format("Buffering... {}%", *static_cast<const std::int64_t*>(a_property.data));
+						}
+					}
+					return;
+				}
+				if (a_id == kTitle) {
+					_title = a_property.format == MPV_FORMAT_STRING ? *static_cast<char* const*>(a_property.data) : "";
+					std::scoped_lock lock(_statusMutex);
+					_status.title = _title;
+					return;
+				}
+				if (a_property.format == MPV_FORMAT_NONE || !a_property.data) {
+					return;
+				}
+				switch (a_id) {
+				case kDisplayWidth:
+					_videoWidth = static_cast<int>(*static_cast<const std::int64_t*>(a_property.data));
+					break;
+				case kDisplayHeight:
+					_videoHeight = static_cast<int>(*static_cast<const std::int64_t*>(a_property.data));
+					break;
+				case kPause:
+					{
+						_paused = *static_cast<const int*>(a_property.data) != 0;
+						History::Save(true);
+						std::scoped_lock lock(_statusMutex);
+						if (_status.state == State::Playing || _status.state == State::Paused) {
+							_status.state = _paused ? State::Paused : State::Playing;
+						}
+					}
+					return;
+				default:
+					return;
+				}
+
+				std::scoped_lock lock(_statusMutex);
+				_status.aspect = _videoWidth > 0 && _videoHeight > 0 ? static_cast<double>(_videoWidth) / _videoHeight : 0.0;
+			}
+
+			void RenderFrame()
+			{
+				if (_videoWidth <= 0 || _videoHeight <= 0) {
+					return;
+				}
+
+				const int width = Settings::Get().width;
+				const int height = std::max(2, static_cast<int>(std::lround(static_cast<double>(width) * _videoHeight / _videoWidth)));
+				_back.Resize(width, height);
+				if (!_back.valid()) {
+					logger::error("Out of memory for a {}x{} frame", width, height);
+					return;
+				}
+
+				int         size[2]{ width, height };
+				std::size_t stride = _back.stride;
+				char        format[] = "bgr0";
+				mpv_render_param params[]{
+					{ MPV_RENDER_PARAM_SW_SIZE, size },
+					{ MPV_RENDER_PARAM_SW_FORMAT, format },
+					{ MPV_RENDER_PARAM_SW_STRIDE, &stride },
+					{ MPV_RENDER_PARAM_SW_POINTER, _back.data() },
+					{ MPV_RENDER_PARAM_INVALID, nullptr },
+				};
+				if (const auto error = _api->mpv_render_context_render(_render, params); error < 0) {
+					logger::error("mpv_render_context_render failed: {}", _api->mpv_error_string(error));
+					return;
+				}
+
+				// "bgr0" leaves the fourth byte undefined; the overlay samples it as alpha.
+				for (int y = 0; y < height; ++y) {
+					auto* row = _back.data() + y * _back.stride;
+					for (int x = 0; x < width; ++x) {
+						row[x * 4 + 3] = 0xFF;
+					}
+				}
+
+				_awaitingFrame = false;
+				std::scoped_lock lock(_frameMutex);
+				std::swap(_front, _back);
+				++_frameSequence;
+			}
+
+			void ClearFrame()
+			{
+				std::scoped_lock lock(_frameMutex);
+				_front.width = 0;
+				_front.height = 0;
+				++_frameSequence;
+			}
+
+			void SetStatus(State a_state, std::string a_message)
+			{
+				std::scoped_lock lock(_statusMutex);
+				_status.state = a_state;
+				_status.message = std::move(a_message);
+			}
+
+			// Worker thread only.
+			const Mpv::Api*     _api{ nullptr };
+			mpv_handle*         _mpv{ nullptr };
+			mpv_render_context* _render{ nullptr };
+			std::string         _loadError;
+			std::string         _ytdlError;  // last ytdl hook error for the current file
+			std::string         _currentPath;  // URL or path of the current file, as passed to loadfile
+			double              _position{ 0.0 };
+			double              _duration{ 0.0 };
+			bool                _awaitingFrame{ false };  // between opening a file and rendering its first frame
+			std::string         _title;  // media-title: the YouTube title, or the file name
+			std::vector<Edition>                  _editions;
+			std::int64_t                          _currentEdition{ -1 };
+			std::chrono::steady_clock::time_point _loadedAt;
+			int                 _videoWidth{ 0 };
+			int                 _videoHeight{ 0 };
+			bool                _paused{ false };
+			FrameBuffer         _back;
+
+			std::once_flag                    _started;
+			std::mutex                        _queueMutex;
+			std::condition_variable           _wakeCondition;
+			std::deque<std::function<void()>> _commands;
+			bool                              _wake{ false };
+
+			std::mutex _statusMutex;
+			Status     _status;
+
+			std::mutex    _frameMutex;
+			FrameBuffer   _front;
+			std::uint64_t _frameSequence{ 0 };
+		};
+	}
+
+	void Play(std::string a_source)
+	{
+		Player::Get().Play(std::move(a_source));
+	}
+
+	void TogglePause()
+	{
+		Player::Get().TogglePause();
+	}
+
+	void Stop()
+	{
+		Player::Get().Stop();
+	}
+
+	void SeekBy(double a_seconds)
+	{
+		Player::Get().SeekBy(a_seconds);
+	}
+
+	void SeekTo(double a_fraction)
+	{
+		Player::Get().SeekTo(a_fraction);
+	}
+
+	void SetVolume(int a_volume)
+	{
+		Player::Get().SetVolume(a_volume);
+	}
+
+	void SelectQuality(int a_height)
+	{
+		Player::Get().SelectQuality(a_height);
+	}
+
+	void ShowNotice(std::string a_message)
+	{
+		Player::Get().ShowNotice(std::move(a_message));
+	}
+
+	Status GetStatus()
+	{
+		return Player::Get().GetStatus();
+	}
+
+	void ConsumeFrame(std::uint64_t& a_sequence, const std::function<void(const FrameView&)>& a_upload)
+	{
+		Player::Get().ConsumeFrame(a_sequence, a_upload);
+	}
+}

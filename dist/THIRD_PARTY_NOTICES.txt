@@ -1,0 +1,23 @@
+PiP Player bundles or is built from the following third-party software.
+
+libmpv (libmpv-2.dll)
+  LGPL build of mpv (https://mpv.io, source: https://github.com/mpv-player/mpv) built by
+  https://github.com/zhongfly/mpv-winbuild. Licensed under the GNU Lesser General Public License v2.1 or later;
+  it statically includes FFmpeg and other libraries under LGPL-compatible licenses. libmpv-2.dll is a separate,
+  replaceable file loaded at runtime: you may swap in any compatible libmpv build.
+
+yt-dlp (yt-dlp.exe)
+  https://github.com/yt-dlp/yt-dlp - The Unlicense. The Windows executable bundles Python and Python packages under
+  their own licenses (see the yt-dlp README); it includes yt-dlp-ejs (Unlicense, with MIT and ISC components).
+  Used to play YouTube links; replaceable, and updated in place by the control panel's "Update yt-dlp" button.
+
+QuickJS-NG (qjs.exe) (https://github.com/quickjs-ng/quickjs) - MIT License
+  JavaScript runtime yt-dlp uses for YouTube.
+
+CommonLibSSE-GG (https://github.com/eddoursul/CommonLibSSE-GG) - MIT License
+Dear ImGui (https://github.com/ocornut/imgui) - MIT License
+spdlog (https://github.com/gabime/spdlog) - MIT License
+simpleini (https://github.com/brofield/simpleini) - MIT License
+DirectXMath and DirectXTK SimpleMath (https://github.com/microsoft) - MIT License
+xbyak (https://github.com/herumi/xbyak) - BSD 3-Clause License
+rapidcsv (https://github.com/d99kris/rapidcsv) - BSD 3-Clause License

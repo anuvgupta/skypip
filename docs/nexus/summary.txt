@@ -1,0 +1,1 @@
+Watch YouTube, streams, or your own video files in a small picture-in-picture window while you play. Drawn inside the game, works in fullscreen, pauses the game while you pick a video, and remembers where you left off. Pure SKSE plugin: no ESP, nothing in your saves.
