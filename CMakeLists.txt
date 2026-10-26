@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 
 project(
 	PiPPlayer
-	VERSION 1.0.3
+	VERSION 1.0.4
 	DESCRIPTION "Picture-in-picture video player for Skyrim SE / Enderal SE"
 	LANGUAGES C CXX
 )
@@ -38,6 +38,7 @@ include("${COMMONLIB_SRC_DIR}/cmake/CommonLibSSE.cmake")
 add_commonlibsse_plugin(
 	${PROJECT_NAME}
 	SOURCES
+	src/AutoPause.cpp
 	src/Clipboard.cpp
 	src/History.cpp
 	src/Hooks.cpp

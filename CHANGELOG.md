@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4-beta - 2026-10-25
+
+- The video pauses while you talk to someone and resumes 3 seconds after the conversation ends, or after a minute in
+  which no one speaks. Both are adjustable (or can be turned off) in the control panel's new **Conversations** section
+  and in the INI (`PauseForDialogue`, `ResumeAfterDialogue`, `ResumeAfterSilence`).
+
 ## 1.0.3 - 2026-10-19
 
 - The control panel calls the YouTube setting **YouTube lookup** with the choices **Reliable** (default), **Faster**,

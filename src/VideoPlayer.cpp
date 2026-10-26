@@ -196,6 +196,7 @@ namespace PiP::VideoPlayer
 			}
 
 			void TogglePause() { Command({ "cycle", "pause" }); }
+			void SetPaused(bool a_paused) { Command({ "set", "pause", a_paused ? "yes" : "no" }); }
 			void Stop()
 			{
 				Post([this] {
@@ -860,6 +861,11 @@ namespace PiP::VideoPlayer
 	void TogglePause()
 	{
 		Player::Get().TogglePause();
+	}
+
+	void SetPaused(bool a_paused)
+	{
+		Player::Get().SetPaused(a_paused);
 	}
 
 	void Stop()

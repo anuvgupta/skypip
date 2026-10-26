@@ -19,7 +19,8 @@ fi
 
 "$repo_root/scripts/fetch-third-party.sh"
 
-version="$(grep -m1 -E '^[[:space:]]*VERSION [0-9]+\.[0-9]+\.[0-9]+' "$repo_root/CMakeLists.txt" | awk '{print $2}')"
+# PACKAGE_VERSION overrides the archive version, e.g. PACKAGE_VERSION=1.0.4-beta for a pre-release.
+version="${PACKAGE_VERSION:-$(grep -m1 -E '^[[:space:]]*VERSION [0-9]+\.[0-9]+\.[0-9]+' "$repo_root/CMakeLists.txt" | awk '{print $2}')}"
 package_dir="$repo_root/build/package"
 plugin_files=(
 	"$dll:PiPPlayer.dll"

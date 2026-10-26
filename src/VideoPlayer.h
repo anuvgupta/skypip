@@ -37,6 +37,7 @@ namespace PiP::VideoPlayer
 	// Safe from any thread; playback runs on a worker thread that owns libmpv.
 	void Play(std::string a_source);  // UTF-8 URL or file path
 	void TogglePause();
+	void SetPaused(bool a_paused);
 	void Stop();
 	void SeekBy(double a_seconds);
 	void SeekTo(double a_fraction);  // 0..1 of the duration

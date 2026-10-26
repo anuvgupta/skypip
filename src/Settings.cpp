@@ -94,6 +94,9 @@ namespace PiP
 			logger::warn("Unknown YouTubeSolver '{}', using Always", solver);
 		}
 		s.resumeOnStart = ini.GetBoolValue("Playback", "ResumeOnStart", s.resumeOnStart);
+		s.pauseForDialogue = ini.GetBoolValue("Playback", "PauseForDialogue", s.pauseForDialogue);
+		s.resumeAfterDialogue = Clamped("ResumeAfterDialogue", static_cast<int>(ini.GetLongValue("Playback", "ResumeAfterDialogue", s.resumeAfterDialogue)), 0, 600);
+		s.resumeAfterSilence = Clamped("ResumeAfterSilence", static_cast<int>(ini.GetLongValue("Playback", "ResumeAfterSilence", s.resumeAfterSilence)), 0, 3600);
 		s.youTubeMaxHeight = Clamped("YouTubeMaxHeight", static_cast<int>(ini.GetLongValue("Playback", "YouTubeMaxHeight", s.youTubeMaxHeight)), 0, 4320);
 
 		s.togglePanelKey = ReadKey(ini, "TogglePanel", s.togglePanelKey);
@@ -138,6 +141,9 @@ namespace PiP
 		ini.SetValue("Overlay", "Brightness", std::to_string(s.brightness).c_str());
 		ini.SetValue("Playback", "Volume", std::to_string(s.volume).c_str());
 		ini.SetValue("Playback", "YouTubeMaxHeight", std::to_string(s.youTubeMaxHeight).c_str());
+		ini.SetValue("Playback", "PauseForDialogue", s.pauseForDialogue ? "true" : "false");
+		ini.SetValue("Playback", "ResumeAfterDialogue", std::to_string(s.resumeAfterDialogue).c_str());
+		ini.SetValue("Playback", "ResumeAfterSilence", std::to_string(s.resumeAfterSilence).c_str());
 		const auto solver = std::ranges::find(kSolvers, s.youTubeSolver, &std::pair<std::string_view, YouTubeSolver>::second)->first;
 		ini.SetValue("Playback", "YouTubeSolver", std::string(solver).c_str());
 

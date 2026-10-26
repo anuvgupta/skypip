@@ -70,6 +70,8 @@ Open it with `[`. Everything you change here is saved automatically.
 - **YouTube lookup**: leave it on **Reliable**. **Faster** starts YouTube videos about a second sooner, but a few
   videos may then take longer while it retries.
 - **Update yt-dlp**: press this if YouTube videos stop playing. YouTube changes often, and an update usually fixes it.
+- **Conversations**: the video pauses while you talk to someone and starts again 3 seconds after the conversation
+  ends, or after a minute in which no one speaks. Change either time, or set it to off.
 - **Corner, Size, Opacity, Brightness, Margins**: where the video sits and how it looks.
 
 While the panel is open, the video also has its own controls: a play/pause button, 5 second skip buttons, and a seek

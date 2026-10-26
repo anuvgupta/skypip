@@ -1,3 +1,4 @@
+#include "AutoPause.h"
 #include "History.h"
 #include "Hooks.h"
 #include "Input.h"
@@ -12,6 +13,7 @@ namespace
 		switch (a_message->type) {
 		case SKSE::MessagingInterface::kDataLoaded:
 			PiP::Input::WarnAboutConflicts();
+			PiP::AutoPause::Register();
 			break;
 		case SKSE::MessagingInterface::kPostLoadGame:
 		case SKSE::MessagingInterface::kNewGame:

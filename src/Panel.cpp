@@ -488,6 +488,24 @@ namespace PiP::Panel
 					DrawYouTubeSection(settings, status);
 				}
 
+				ImGui::SeparatorText("Conversations");
+				bool pauseForDialogue = settings.pauseForDialogue;
+				if (ImGui::Checkbox("Pause the video while talking to someone", &pauseForDialogue)) {
+					Settings::Update([&](Settings& a_settings) { a_settings.pauseForDialogue = pauseForDialogue; });
+				}
+				ImGui::BeginDisabled(!pauseForDialogue);
+				int resumeAfter = settings.resumeAfterDialogue;
+				Row("Resume");
+				if (ImGui::SliderInt("##resume-after", &resumeAfter, 0, 30, resumeAfter == 0 ? "not when it ends" : "%d s after it ends")) {
+					Settings::Update([&](Settings& a_settings) { a_settings.resumeAfterDialogue = resumeAfter; });
+				}
+				int resumeSilence = settings.resumeAfterSilence;
+				Row("Or resume");
+				if (ImGui::SliderInt("##resume-silence", &resumeSilence, 0, 300, resumeSilence == 0 ? "not when it's quiet" : "after %d s of quiet")) {
+					Settings::Update([&](Settings& a_settings) { a_settings.resumeAfterSilence = resumeSilence; });
+				}
+				ImGui::EndDisabled();
+
 				ImGui::SeparatorText("Layout");
 				constexpr std::pair<const char*, Corner> corners[]{
 					{ "Top left", Corner::TopLeft },

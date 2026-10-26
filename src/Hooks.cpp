@@ -1,5 +1,6 @@
 #include "Hooks.h"
 
+#include "AutoPause.h"
 #include "Input.h"
 #include "Overlay.h"
 
@@ -24,6 +25,7 @@ namespace PiP::Hooks
 			static void thunk(std::uint32_t a_timer)
 			{
 				func(a_timer);
+				AutoPause::Update();
 				Overlay::Render();
 			}
 			static inline REL::Relocation<decltype(thunk)> func;
