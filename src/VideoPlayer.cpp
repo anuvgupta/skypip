@@ -207,6 +207,27 @@ namespace PiP::VideoPlayer
 					}
 				});
 			}
+			void Reload()
+			{
+				Post([this] {
+					if (!_mpv || _requestedSource.empty()) {
+						return;
+					}
+					double start = 0.0;
+					if (_position > 0.0) {
+						const bool atEnd = _duration > 0.0 && _position >= _duration - 1.0;
+						start = atEnd ? 0.0 : _position;
+					} else {
+						start = History::ResumePosition(_requestedSource);  // stopped: where it was left
+					}
+					logger::info("Reloading {} from {:.0f} s", _requestedSource, start);
+					const auto source = _requestedSource;
+					SetStatus(State::Loading, OpeningMessage(source));
+					FadeOut();
+					RunCommand({ "set", "pause", "no" });
+					LoadFile(source, start);
+				});
+			}
 			void SeekBy(double a_seconds) { Command({ "seek", std::format("{:.3f}", a_seconds), "relative" }); }
 			void SeekTo(double a_fraction) { Command({ "seek", std::format("{:.3f}", std::clamp(a_fraction, 0.0, 1.0) * 100.0), "absolute-percent" }); }
 			void SetVolume(int a_volume)
@@ -454,6 +475,10 @@ namespace PiP::VideoPlayer
 			void LoadFile(const std::string& a_source, double a_start)
 			{
 				_requestedSource = a_source;
+				{
+					std::scoped_lock lock(_statusMutex);
+					_status.source = a_source;
+				}
 				if (a_start > 0.0) {
 					RunCommand({ "loadfile", a_source, "replace", "-1", std::format("start={:.3f}", a_start) });
 				} else {
@@ -871,6 +896,11 @@ namespace PiP::VideoPlayer
 	void Stop()
 	{
 		Player::Get().Stop();
+	}
+
+	void Reload()
+	{
+		Player::Get().Reload();
 	}
 
 	void SeekBy(double a_seconds)

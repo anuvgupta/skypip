@@ -3,6 +3,7 @@
 #include "AutoPause.h"
 #include "Input.h"
 #include "Overlay.h"
+#include "Settings.h"
 
 namespace PiP::Hooks
 {
@@ -26,6 +27,7 @@ namespace PiP::Hooks
 			{
 				func(a_timer);
 				AutoPause::Update();
+				Settings::SaveIfSettled();
 				Overlay::Render();
 			}
 			static inline REL::Relocation<decltype(thunk)> func;

@@ -470,6 +470,15 @@ namespace PiP::Panel
 				if (ImGui::Button("Stop")) {
 					VideoPlayer::Stop();
 				}
+				ImGui::EndDisabled();
+				ImGui::SameLine();
+				ImGui::BeginDisabled(status.source.empty());
+				if (ImGui::Button("Reload")) {
+					VideoPlayer::Reload();
+				}
+				ImGui::SetItemTooltip("Load this video again from its link or file and continue where it was");
+				ImGui::EndDisabled();
+				ImGui::BeginDisabled(!IsLoaded(status));
 				ImGui::SameLine();
 				ImGui::AlignTextToFramePadding();
 				const auto time = status.duration > 0.0 ? std::format("{} / {}", FormatTime(status.position), FormatTime(status.duration)) :

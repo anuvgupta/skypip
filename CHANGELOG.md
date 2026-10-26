@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.4 - 2026-10-25
+
+- The video pauses while you talk to someone and resumes 3 seconds after the conversation ends, or once no one has
+  spoken for 9 seconds. Both times are adjustable (or can be turned off) in the control panel's new **Conversations**
+  section and in the INI (`PauseForDialogue`, `ResumeAfterDialogue`, `ResumeAfterSilence`).
+- **Reload** button in the control panel: loads the current video again from its link or file and continues where it
+  was (from the start if it had ended).
+- New installs start with the video in the top-right corner at 75% volume (was bottom-left, 50%). Existing
+  `PiPPlayer.ini` files keep their settings.
+- Control panel settings are saved two seconds after you change them, not only when the panel closes.
+
 ## 1.0.4-beta - 2026-10-25
 
 - The video pauses while you talk to someone and resumes 3 seconds after the conversation ends, or after a minute in

@@ -23,7 +23,7 @@ namespace PiP
 	struct Settings
 	{
 		// [Overlay] - pixels are at the game's render resolution
-		Corner corner = Corner::BottomLeft;
+		Corner corner = Corner::TopRight;
 		int    width = 480;
 		int    marginX = 24;
 		int    marginY = 24;
@@ -32,7 +32,7 @@ namespace PiP
 		int    brightness = 0;  // -100 (darker) to 100 (brighter); 0 = unchanged
 
 		// [Playback]
-		int         volume = 50;
+		int         volume = 75;
 		bool        loop = false;
 		std::string url;                 // initial text of the control panel's URL box
 		int         youTubeMaxHeight = 720;  // highest YouTube resolution to request; 0 = best
@@ -40,7 +40,7 @@ namespace PiP
 		YouTubeSolver youTubeSolver = YouTubeSolver::Always;
 		bool          pauseForDialogue = true;  // pause during conversations
 		int           resumeAfterDialogue = 3;  // seconds after a conversation ends; 0 = do not resume then
-		int           resumeAfterSilence = 60;  // seconds without a spoken line; 0 = do not resume then
+		int           resumeAfterSilence = 9;   // seconds without a spoken line; 0 = do not resume then
 
 		// [Hotkeys] - DirectInput scan codes, set in the INI by name (see Keys.h)
 		std::uint32_t togglePanelKey = 0x1A;    // [
@@ -48,7 +48,8 @@ namespace PiP
 		std::uint32_t toggleVisibleKey = 0x2B;  // backslash
 
 		static void Load();
-		static void Save();  // writes changed layout and volume back to the INI
+		static void Save();            // writes changed settings back to the INI now
+		static void SaveIfSettled();  // the same, once nothing has changed for a couple of seconds (call every frame)
 
 		// Safe from any thread.
 		[[nodiscard]] static Settings Get();

@@ -24,6 +24,7 @@ namespace PiP::VideoPlayer
 		std::vector<int> qualities;         // heights the current video offers, best first; empty unless switchable
 		bool             buffering{ false };  // playback is waiting for the network
 		std::string      title;               // the YouTube title, or the file name
+		std::string      source;              // the link or file last played (what Reload loads again)
 	};
 
 	struct FrameView
@@ -39,6 +40,9 @@ namespace PiP::VideoPlayer
 	void TogglePause();
 	void SetPaused(bool a_paused);
 	void Stop();
+	// Loads the current (or last) video again from its link or file, continuing where it was, or from the start if it
+	// had reached the end. YouTube links are looked up again.
+	void Reload();
 	void SeekBy(double a_seconds);
 	void SeekTo(double a_fraction);  // 0..1 of the duration
 	void SetVolume(int a_volume);    // 0..100

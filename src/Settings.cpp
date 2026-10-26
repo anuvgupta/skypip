@@ -26,6 +26,8 @@ namespace PiP
 		std::mutex g_mutex;
 		Settings   g_settings;
 		bool       g_dirty{ false };
+		std::chrono::steady_clock::time_point g_lastChange;
+		constexpr auto                        kSettleTime = std::chrono::seconds(2);
 
 		Corner ParseCorner(std::string_view a_value, Corner a_default)
 		{
@@ -73,7 +75,7 @@ namespace PiP
 
 		Settings s;
 
-		s.corner = ParseCorner(ini.GetValue("Overlay", "Corner", "BottomLeft"), s.corner);
+		s.corner = ParseCorner(ini.GetValue("Overlay", "Corner", "TopRight"), s.corner);
 		s.width = Clamped("Width", static_cast<int>(ini.GetLongValue("Overlay", "Width", s.width)), 64, 3840);
 		s.marginX = Clamped("MarginX", static_cast<int>(ini.GetLongValue("Overlay", "MarginX", s.marginX)), 0, 2000);
 		s.marginY = Clamped("MarginY", static_cast<int>(ini.GetLongValue("Overlay", "MarginY", s.marginY)), 0, 2000);
@@ -166,5 +168,17 @@ namespace PiP
 		std::scoped_lock lock(g_mutex);
 		a_edit(g_settings);
 		g_dirty = true;
+		g_lastChange = std::chrono::steady_clock::now();
+	}
+
+	void Settings::SaveIfSettled()
+	{
+		{
+			std::scoped_lock lock(g_mutex);
+			if (!g_dirty || std::chrono::steady_clock::now() - g_lastChange < kSettleTime) {
+				return;
+			}
+		}
+		Save();
 	}
 }
