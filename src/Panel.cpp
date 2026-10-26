@@ -415,6 +415,32 @@ namespace PiP::Panel
 			}
 		}
 
+		// Puts every setting the panel shows back to its default; the INI-only ones (keys, loop, ...) stay as they are.
+		void ResetPanelSettings(const Settings& a_current)
+		{
+			const Settings defaults{};
+			Settings::Update([&](Settings& a_edit) {
+				a_edit.corner = defaults.corner;
+				a_edit.width = defaults.width;
+				a_edit.marginX = defaults.marginX;
+				a_edit.marginY = defaults.marginY;
+				a_edit.opacity = defaults.opacity;
+				a_edit.brightness = defaults.brightness;
+				a_edit.volume = defaults.volume;
+				a_edit.youTubeMaxHeight = defaults.youTubeMaxHeight;
+				a_edit.youTubeSolver = defaults.youTubeSolver;
+				a_edit.pauseForDialogue = defaults.pauseForDialogue;
+				a_edit.resumeAfterDialogue = defaults.resumeAfterDialogue;
+				a_edit.resumeAfterSilence = defaults.resumeAfterSilence;
+			});
+			VideoPlayer::SetVolume(defaults.volume);
+			VideoPlayer::SetYouTubeSolver(defaults.youTubeSolver);
+			if (a_current.youTubeMaxHeight != defaults.youTubeMaxHeight) {
+				VideoPlayer::SelectQuality(defaults.youTubeMaxHeight);
+			}
+			logger::info("Panel settings reset to defaults");
+		}
+
 		void DrawPanelWindow(ImVec2 a_min, ImVec2 a_max)
 		{
 			const auto  settings = Settings::Get();
@@ -556,6 +582,24 @@ namespace PiP::Panel
 				Row("Margin Y");
 				if (ImGui::SliderInt("##margin-y", &marginY, 0, 600, "%d px")) {
 					Settings::Update([&](Settings& a_settings) { a_settings.marginY = marginY; });
+				}
+
+				ImGui::Separator();
+				if (ImGui::Button("Reset to defaults")) {
+					ImGui::OpenPopup("reset-defaults");
+				}
+				ImGui::SetItemTooltip("Put every setting on this panel back to how it was when you installed the mod");
+				if (ImGui::BeginPopup("reset-defaults")) {
+					ImGui::TextUnformatted("Reset every setting on this panel?");
+					if (ImGui::Button("Reset")) {
+						ResetPanelSettings(settings);
+						ImGui::CloseCurrentPopup();
+					}
+					ImGui::SameLine();
+					if (ImGui::Button("Cancel")) {
+						ImGui::CloseCurrentPopup();
+					}
+					ImGui::EndPopup();
 				}
 
 				ImGui::Separator();

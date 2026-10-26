@@ -27,7 +27,7 @@ namespace PiP
 		int    width = 480;
 		int    marginX = 24;
 		int    marginY = 24;
-		float  opacity = 1.0F;
+		float  opacity = 0.96F;
 		float  cornerRadius = 6.0F;
 		int    brightness = 0;  // -100 (darker) to 100 (brighter); 0 = unchanged
 
@@ -39,8 +39,8 @@ namespace PiP
 		bool          resumeOnStart = true;  // play the last video, from where it left off, once a save loads
 		YouTubeSolver youTubeSolver = YouTubeSolver::Always;
 		bool          pauseForDialogue = true;  // pause during conversations
-		int           resumeAfterDialogue = 3;  // seconds after a conversation ends; 0 = do not resume then
-		int           resumeAfterSilence = 9;   // seconds without a spoken line; 0 = do not resume then
+		int           resumeAfterDialogue = 8;  // seconds after a conversation ends; 0 = do not resume then
+		int           resumeAfterSilence = 15;  // seconds without a spoken line; 0 = do not resume then
 
 		// [Hotkeys] - DirectInput scan codes, set in the INI by name (see Keys.h)
 		std::uint32_t togglePanelKey = 0x1A;    // [

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.5 - 2026-10-26
+
+- New **Reset to defaults** button in the control panel puts every setting on the panel back to its default.
+- The video is now 96% opaque by default (was 100%). Existing `PiPPlayer.ini` files keep their setting.
+- New conversation defaults: the video resumes 8 seconds after a conversation ends (was 3), or once no one has spoken
+  for 15 seconds (was 9). Existing `PiPPlayer.ini` files keep their settings.
+- When a YouTube video can't play, the panel shows YouTube's actual reason (for example "Sign in to confirm you're not
+  a bot") instead of a generic error.
+
 ## 1.0.4 - 2026-10-25
 
 - The video pauses while you talk to someone and resumes 3 seconds after the conversation ends, or once no one has

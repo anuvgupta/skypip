@@ -128,6 +128,26 @@ namespace PiP::VideoPlayer
 		constexpr auto kYtdlOptionsWithoutJs = "no-config=,no-js-runtimes=";
 		constexpr auto kYtdlOptionsWithJs = "no-config=,js-runtimes=quickjs";
 
+		// yt-dlp's reason from an "ERROR: [youtube] <id>: <reason>. <advice>" line, cut to its first sentence; empty for
+		// any other line, such as the hook's generic "youtube-dl failed: unexpected error occurred" that follows it.
+		std::string_view YtdlReason(std::string_view a_line)
+		{
+			constexpr auto prefix = "ERROR: "sv;
+			if (!a_line.starts_with(prefix)) {
+				return {};
+			}
+			a_line.remove_prefix(prefix.size());
+			if (a_line.starts_with('[')) {
+				if (const auto colon = a_line.find(": "); colon != std::string_view::npos) {
+					a_line.remove_prefix(colon + 2);
+				}
+			}
+			if (const auto end = a_line.find(". "); end != std::string_view::npos) {
+				a_line = a_line.substr(0, end + 1);
+			}
+			return a_line;
+		}
+
 		// What the player is doing before mpv reports the file loaded.
 		std::string OpeningMessage(std::string_view a_source)
 		{
@@ -636,9 +656,14 @@ namespace PiP::VideoPlayer
 							                   message.log_level == MPV_LOG_LEVEL_WARN  ? spdlog::level::warn :
 							                                                              spdlog::level::info;
 							spdlog::log(level, "mpv [{}] {}", message.prefix, text);
-							// The ytdl hook explains a failed YouTube load only in its log; keep it for the status.
+							// The ytdl hook explains a failed YouTube load only in its log; keep yt-dlp's own reason for the
+							// status, falling back to the hook's line when yt-dlp gave none.
 							if (message.log_level <= MPV_LOG_LEVEL_ERROR && std::string_view(message.prefix) == "ytdl_hook"sv) {
-								_ytdlError = text;
+								if (const auto reason = YtdlReason(text); !reason.empty()) {
+									_ytdlError = reason;
+								} else if (_ytdlError.empty()) {
+									_ytdlError = text;
+								}
 							}
 						}
 						break;
