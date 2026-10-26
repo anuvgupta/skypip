@@ -24,10 +24,10 @@ namespace PiP
 	{
 		// [Overlay] - pixels are at the game's render resolution
 		Corner corner = Corner::TopRight;
-		int    width = 480;
+		int    width = 600;
 		int    marginX = 24;
 		int    marginY = 24;
-		float  opacity = 0.96F;
+		float  opacity = 0.92F;
 		float  cornerRadius = 6.0F;
 		int    brightness = 0;  // -100 (darker) to 100 (brighter); 0 = unchanged
 
@@ -35,7 +35,7 @@ namespace PiP
 		int         volume = 75;
 		bool        loop = false;
 		std::string url;                 // initial text of the control panel's URL box
-		int         youTubeMaxHeight = 720;  // highest YouTube resolution to request; 0 = best
+		int         youTubeMaxHeight = 1080;  // highest YouTube resolution to request; 0 = best
 		bool          resumeOnStart = true;  // play the last video, from where it left off, once a save loads
 		YouTubeSolver youTubeSolver = YouTubeSolver::Always;
 		bool          pauseForDialogue = true;  // pause during conversations

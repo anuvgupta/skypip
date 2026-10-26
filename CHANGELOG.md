@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.6 - 2026-10-26
+
+- New defaults: the video is 600 px wide (was 480), 92% opaque (was 96%), and YouTube videos play at up to 1080p
+  (was 720p). Existing `PiPPlayer.ini` files keep their settings.
+
 ## 1.0.5 - 2026-10-26
 
 - New **Reset to defaults** button in the control panel puts every setting on the panel back to its default.
