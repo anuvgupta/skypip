@@ -465,7 +465,7 @@ namespace PiP::Panel
 			bool open = true;
 			constexpr auto flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
 			                       ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings;
-			if (ImGui::Begin("PiP Player", &open, flags)) {
+			if (ImGui::Begin("SkyPiP", &open, flags)) {
 				const auto& style = ImGui::GetStyle();
 				const float playWidth = ImGui::CalcTextSize("Play").x + style.FramePadding.x * 2.0F;
 				ImGui::SetNextItemWidth(-(playWidth + style.ItemSpacing.x));

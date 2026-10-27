@@ -1,9 +1,10 @@
-# PiP Player
+# SkyPiP
 
 Watch YouTube videos, livestreams, or video files from your PC in a small window in the corner of the screen while you
 play Skyrim Special Edition or Enderal SE.
 
 - Works in fullscreen and windowed mode, on Windows and on a Mac with CrossOver.
+- Pauses the video while you talk to someone, and starts it again afterwards.
 - Picks up each video where you left off, even after you quit the game.
 - Just an SKSE plugin: nothing to enable in your load order, nothing saved in your save files. You can add or remove it
   at any time.
@@ -15,17 +16,17 @@ You need [SKSE](https://skse.silverlock.org/) and
 comes with Address Library.
 
 1. Go to the [latest release](https://github.com/anuvgupta/skypip/releases/latest) and download
-   **`PiPPlayer-<version>-with-YouTube.zip`**.
+   **`SkyPiP-<version>-with-YouTube.zip`**.
 2. Install it like any other mod with Mod Organizer 2 or Vortex. Or, without a mod manager, extract it into your
    game's `Data` folder (the `Data` folder next to `SkyrimSE.exe`).
 3. Start the game through SKSE.
 
-**Don't want YouTube?** Download `PiPPlayer-<version>.zip` instead. It is the same mod without the YouTube tools, so it
+**Don't want YouTube?** Download `SkyPiP-<version>.zip` instead. It is the same mod without the YouTube tools, so it
 plays only video files and direct video links.
 
 ### Adding YouTube later
 
-If you installed `PiPPlayer-<version>.zip` and change your mind, install `PiPPlayer-YouTube-Tools-<version>.zip` from
+If you installed `SkyPiP-<version>.zip` and change your mind, install `SkyPiP-YouTube-Tools-<version>.zip` from
 the same release. It only adds the YouTube tools.
 
 Or get the two tools yourself and put them in `Data/SKSE/Plugins/PiPPlayer`, the folder that contains `libmpv-2.dll`:
@@ -94,6 +95,8 @@ playing again automatically when you load a save. If you had stopped it, or it h
 - **YouTube links say I need the YouTube tools.** You installed the version without YouTube; see
   [Adding YouTube later](#adding-youtube-later).
 - **YouTube videos stopped playing.** Open the panel and press **Update yt-dlp**.
+- **The picture or the sound freezes while a video plays.** Open the panel and press **Reload**. The video loads
+  again and continues where it was.
 - **Something else.** The log is `Documents/My Games/Skyrim Special Edition/SKSE/PiPPlayer.log`; include it when you
   report a problem.
 

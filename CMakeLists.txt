@@ -2,11 +2,11 @@ cmake_minimum_required(VERSION 3.24)
 
 project(
 	PiPPlayer
-	VERSION 1.0.7
+	VERSION 1.0.8
 	DESCRIPTION "Picture-in-picture video player for Skyrim SE / Enderal SE"
 	LANGUAGES C CXX
 )
-set(PROJECT_FRIENDLY_NAME "PiP Player")
+set(PROJECT_FRIENDLY_NAME "SkyPiP")
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

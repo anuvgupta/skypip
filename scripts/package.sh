@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Builds the release archives in build/package. Their root is the game's Data folder (SKSE/Plugins/...), the layout
 # Nexus Mods, MO2, and Vortex expect; manual installs extract them into Data.
-#   PiPPlayer-<version>.zip                 plugin + libmpv: local files and direct links
-#   PiPPlayer-<version>-with-YouTube.zip    plugin + libmpv + yt-dlp + QuickJS: also YouTube links
-#   PiPPlayer-YouTube-Tools-<version>.zip   yt-dlp + QuickJS only, to add YouTube support to the first archive
+#   SkyPiP-<version>.zip                 plugin + libmpv: local files and direct links
+#   SkyPiP-<version>-with-YouTube.zip    plugin + libmpv + yt-dlp + QuickJS: also YouTube links
+#   SkyPiP-YouTube-Tools-<version>.zip   yt-dlp + QuickJS only, to add YouTube support to the first archive
 # The full set is also staged in build/package/stage for scripts/deploy-crossover.sh.
 # Usage: scripts/package.sh [configure preset, default mac-release]
 set -euo pipefail
@@ -57,10 +57,10 @@ archive() {
 }
 
 stage "$package_dir/plain" "${plugin_files[@]}"
-archive "$package_dir/plain" "PiPPlayer-$version.zip"
+archive "$package_dir/plain" "SkyPiP-$version.zip"
 
 stage "$package_dir/stage" "${plugin_files[@]}" "${youtube_files[@]}"
-archive "$package_dir/stage" "PiPPlayer-$version-with-YouTube.zip"
+archive "$package_dir/stage" "SkyPiP-$version-with-YouTube.zip"
 
 stage "$package_dir/youtube-tools" "${youtube_files[@]}"
-archive "$package_dir/youtube-tools" "PiPPlayer-YouTube-Tools-$version.zip"
+archive "$package_dir/youtube-tools" "SkyPiP-YouTube-Tools-$version.zip"

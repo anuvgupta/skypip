@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.8 - 2026-10-26
+
+- PiP Player is now called SkyPiP, and the downloads are named `SkyPiP-<version>-with-YouTube.zip`, `SkyPiP-<version>.zip`,
+  and `SkyPiP-YouTube-Tools-<version>.zip`. The installed files keep their `PiPPlayer` names, so your settings and Recent
+  list carry over.
+- YouTube videos no longer freeze on one picture while the sound plays on. YouTube cuts long downloads, and the
+  player now downloads videos in smaller pieces and retries longer before giving up.
+- If a YouTube download still breaks off mid-video, the player reloads the video where it was, as the **Reload** button
+  does, instead of leaving the picture frozen.
+
 ## 1.0.7 - 2026-10-26
 
 - When you load a save, the last video only starts again if it was still playing or paused when you quit the game. If

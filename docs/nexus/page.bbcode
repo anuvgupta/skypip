@@ -1,4 +1,4 @@
-[size=5][b]PiP Player - watch videos while you play[/b][/size]
+[size=5][b]SkyPiP - watch videos while you play[/b][/size]
 
 [size=4][b]About[/b][/size]
 
@@ -23,18 +23,18 @@ Watch YouTube videos, livestreams, or video files from your PC in a small window
 [size=4][b]Installation[/b][/size]
 
 [list=1]
-[*]Download [b]PiPPlayer with YouTube[/b]. If it isn't listed under Files here, download [font=Courier New]PiPPlayer-<version>-with-YouTube.zip[/font] from [url=https://github.com/anuvgupta/skypip/releases/latest]GitHub[/url].
+[*]Download [b]SkyPiP with YouTube[/b]. If it isn't listed under Files here, download [font=Courier New]SkyPiP-<version>-with-YouTube.zip[/font] from [url=https://github.com/anuvgupta/skypip/releases/latest]GitHub[/url].
 [*]Install it like any other mod with Mod Organizer 2 or Vortex. Or, without a mod manager, extract it into your game's [font=Courier New]Data[/font] folder (the [font=Courier New]Data[/font] folder next to [font=Courier New]SkyrimSE.exe[/font]).
 [*]Start the game through SKSE.
 [/list]
 
-[b]Don't want YouTube?[/b] Download [b]PiPPlayer[/b] instead. It is the same mod without the YouTube tools, so it plays only video files and direct video links.
+[b]Don't want YouTube?[/b] Download [b]SkyPiP[/b] instead. It is the same mod without the YouTube tools, so it plays only video files and direct video links.
 
 [size=3][b]Adding YouTube later[/b][/size]
 
-If you installed [b]PiPPlayer[/b] and change your mind, install [b]PiPPlayer YouTube Tools[/b] (under Files here, or [font=Courier New]PiPPlayer-YouTube-Tools-<version>.zip[/font] on [url=https://github.com/anuvgupta/skypip/releases/latest]GitHub[/url]). It only adds the YouTube tools.
+If you installed [b]SkyPiP[/b] and change your mind, install [b]SkyPiP YouTube Tools[/b] (under Files here, or [font=Courier New]SkyPiP-YouTube-Tools-<version>.zip[/font] on [url=https://github.com/anuvgupta/skypip/releases/latest]GitHub[/url]). It only adds the YouTube tools.
 
-Or get the two tools yourself and put them in [font=Courier New]Data/SKSE/Plugins/PiPPlayer[/font], the folder that contains [font=Courier New]libmpv-2.dll[/font]. With Mod Organizer 2, that folder is inside the PiPPlayer mod: right-click the mod and choose Open in Explorer.
+Or get the two tools yourself and put them in [font=Courier New]Data/SKSE/Plugins/PiPPlayer[/font], the folder that contains [font=Courier New]libmpv-2.dll[/font]. With Mod Organizer 2, that folder is inside the SkyPiP mod: right-click the mod and choose Open in Explorer.
 
 [list=1]
 [*]Download [font=Courier New]yt-dlp_win.zip[/font] from [url=https://github.com/yt-dlp/yt-dlp/releases/latest]yt-dlp's releases[/url] and extract everything in it into that folder (you should end up with [font=Courier New]yt-dlp.exe[/font] and an [font=Courier New]_internal[/font] folder there).
@@ -100,6 +100,7 @@ Most settings are in the control panel. A few more are in [font=Courier New]Data
 
 [list]
 [*][b]Skyrim Special Edition and Anniversary Edition[/b] and [b]Enderal SE[/b]. Not for Skyrim VR or the original 2011 Skyrim.
+[*][b]Windows:[/b] tested with the current Steam versions of Skyrim Special Edition and Enderal SE.
 [*][b]Mac with CrossOver:[/b] works. Videos use more CPU there; if the game slows down, pick a lower Quality. A faint click can sometimes be heard while a YouTube video is being looked up.
 [*][b]SSE Display Tweaks:[/b] works.
 [*][b]ENB, ReShade, Community Shaders:[/b] not tested yet; let me know how it goes.
@@ -112,6 +113,7 @@ Most settings are in the control panel. A few more are in [font=Courier New]Data
 [*][b]A key also does something in the game.[/b] Change the key in the settings file.
 [*][b]YouTube links say I need the YouTube tools.[/b] You installed the version without YouTube; see "Adding YouTube later".
 [*][b]YouTube videos stopped playing.[/b] Open the panel and press [b]Update yt-dlp[/b].
+[*][b]The picture or the sound freezes while a video plays.[/b] Open the panel and press [b]Reload[/b]. The video loads again and continues where it was.
 [*][b]Something else.[/b] Post in the comments with the log file [font=Courier New]Documents/My Games/Skyrim Special Edition/SKSE/PiPPlayer.log[/font] attached.
 [/list]
 
@@ -121,7 +123,7 @@ Remove the mod in your mod manager, or delete [font=Courier New]PiPPlayer.dll[/f
 
 [size=4][b]Credits and licenses[/b][/size]
 
-PiP Player is MIT licensed. It uses:
+SkyPiP is MIT licensed. It uses:
 
 [list]
 [*][url=https://mpv.io]mpv / libmpv[/url] (LGPL; separate, replaceable [font=Courier New]libmpv-2.dll[/font], built by [url=https://github.com/zhongfly/mpv-winbuild]zhongfly/mpv-winbuild[/url])

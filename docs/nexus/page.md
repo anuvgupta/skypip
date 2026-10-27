@@ -1,4 +1,4 @@
-# PiP Player - watch videos while you play
+# SkyPiP - watch videos while you play
 
 ## About
 
@@ -22,23 +22,23 @@ play Skyrim or Enderal.
 
 ## Installation
 
-1. Download **PiPPlayer with YouTube**. If it isn't listed under Files here, download
-   `PiPPlayer-<version>-with-YouTube.zip` from [GitHub](https://github.com/anuvgupta/skypip/releases/latest).
+1. Download **SkyPiP with YouTube**. If it isn't listed under Files here, download
+   `SkyPiP-<version>-with-YouTube.zip` from [GitHub](https://github.com/anuvgupta/skypip/releases/latest).
 2. Install it like any other mod with Mod Organizer 2 or Vortex. Or, without a mod manager, extract it into your
    game's `Data` folder (the `Data` folder next to `SkyrimSE.exe`).
 3. Start the game through SKSE.
 
-**Don't want YouTube?** Download **PiPPlayer** instead. It is the same mod without the YouTube tools, so it plays only
+**Don't want YouTube?** Download **SkyPiP** instead. It is the same mod without the YouTube tools, so it plays only
 video files and direct video links.
 
 ### Adding YouTube later
 
-If you installed **PiPPlayer** and change your mind, install **PiPPlayer YouTube Tools** (under Files here, or
-`PiPPlayer-YouTube-Tools-<version>.zip` on [GitHub](https://github.com/anuvgupta/skypip/releases/latest)). It only adds
+If you installed **SkyPiP** and change your mind, install **SkyPiP YouTube Tools** (under Files here, or
+`SkyPiP-YouTube-Tools-<version>.zip` on [GitHub](https://github.com/anuvgupta/skypip/releases/latest)). It only adds
 the YouTube tools.
 
 Or get the two tools yourself and put them in `Data/SKSE/Plugins/PiPPlayer`, the folder that contains `libmpv-2.dll`.
-With Mod Organizer 2, that folder is inside the PiPPlayer mod: right-click the mod and choose Open in Explorer.
+With Mod Organizer 2, that folder is inside the SkyPiP mod: right-click the mod and choose Open in Explorer.
 
 1. Download `yt-dlp_win.zip` from [yt-dlp's releases](https://github.com/yt-dlp/yt-dlp/releases/latest) and extract
    everything in it into that folder (you should end up with `yt-dlp.exe` and an `_internal` folder there).
@@ -106,6 +106,7 @@ Notepad. Close the game before editing it.
 
 - **Skyrim Special Edition and Anniversary Edition** and **Enderal SE**. Not for Skyrim VR or the
   original 2011 Skyrim.
+- **Windows:** tested with the current Steam versions of Skyrim Special Edition and Enderal SE.
 - **Mac with CrossOver:** works. Videos use more CPU there; if the game slows down, pick a lower Quality. A faint click
   can sometimes be heard while a YouTube video is being looked up.
 - **SSE Display Tweaks:** works.
@@ -119,6 +120,8 @@ Notepad. Close the game before editing it.
 - **YouTube links say I need the YouTube tools.** You installed the version without YouTube; see "Adding YouTube
   later".
 - **YouTube videos stopped playing.** Open the panel and press **Update yt-dlp**.
+- **The picture or the sound freezes while a video plays.** Open the panel and press **Reload**. The video loads
+  again and continues where it was.
 - **Something else.** Post in the comments with the log file
   `Documents/My Games/Skyrim Special Edition/SKSE/PiPPlayer.log` attached.
 
@@ -129,7 +132,7 @@ Remove the mod in your mod manager, or delete `PiPPlayer.dll`, `PiPPlayer.ini`, 
 
 ## Credits and licenses
 
-PiP Player is MIT licensed. It uses:
+SkyPiP is MIT licensed. It uses:
 
 - [mpv / libmpv](https://mpv.io) (LGPL; separate, replaceable `libmpv-2.dll`, built by
   [zhongfly/mpv-winbuild](https://github.com/zhongfly/mpv-winbuild))

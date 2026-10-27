@@ -72,6 +72,8 @@ namespace PiP::VideoPlayer
 
 		// YouTube stream links expire after about six hours; switching tracks after that needs a fresh lookup.
 		constexpr auto kStreamLinkLifetime = std::chrono::hours(5);
+		// A stream that fails again this soon after RecoverStream reloaded it is left alone rather than reloaded in a loop.
+		constexpr auto kRecoveryInterval = std::chrono::seconds(60);
 
 		// The ytdl hook lists every YouTube format as an edition titled like
 		// "298 - 1280x720 (720p60) (h264 60 fps 1897 kbps)"; switching editions only switches streams.
@@ -388,7 +390,7 @@ namespace PiP::VideoPlayer
 				SetOption("video-timing-offset", "0");
 				SetOption("keep-open", "yes");
 				SetOption("osd-level", "0");
-				SetOption("audio-client-name", "PiPPlayer");
+				SetOption("audio-client-name", "SkyPiP");
 				SetOption("volume", std::to_string(settings.volume).c_str());
 				_volume = settings.volume;
 				// Opening and closing the audio device pops. Keep one device open in one format for every video, and
@@ -398,6 +400,11 @@ namespace PiP::VideoPlayer
 				SetOption("audio-channels", "stereo");
 				SetOption("audio-stream-silence", "yes");
 				SetOption("loop-file", settings.loop ? "inf" : "no");
+				// YouTube's servers drop long-lived connections. mpv's curl backend otherwise asks for each stream in one
+				// open-ended request and gives up after 5 drops, which ends the video track while the audio plays on (a
+				// frozen picture). Ask in 10 MiB pieces, as yt-dlp's own downloads do, and retry more before giving up.
+				SetOption("curl-max-request-size", "10MiB");
+				SetOption("curl-max-retries", "20");
 				if (YouTube::Available()) {
 					// QuickJS (qjs.exe) sits next to yt-dlp.exe, where yt-dlp finds it when a lookup needs it.
 					SetOption("ytdl", "yes");
@@ -665,12 +672,35 @@ namespace PiP::VideoPlayer
 									_ytdlError = text;
 								}
 							}
+							if (message.log_level <= MPV_LOG_LEVEL_ERROR && std::string_view(message.prefix) == "curl"sv &&
+								text.starts_with("transfer failed"sv)) {
+								RecoverStream();
+							}
 						}
 						break;
 					default:
 						break;
 					}
 				}
+			}
+
+			// mpv gave up on one of a playing file's streams, which ends that track while the other plays on: the picture
+			// freezes under running audio, or the audio stops under a moving picture. Load the file again where it is, as
+			// the Reload button does, unless the last recovery was too recent to have helped.
+			void RecoverStream()
+			{
+				const auto state = GetStatus().state;
+				if (state != State::Playing && state != State::Paused) {
+					return;  // still opening: a failed open ends the file and reports its error
+				}
+				const auto now = std::chrono::steady_clock::now();
+				if (_recoveredAt && now - *_recoveredAt < kRecoveryInterval) {
+					logger::warn("Stream failed again within {} s of reloading; not reloading", kRecoveryInterval.count());
+					return;
+				}
+				_recoveredAt = now;
+				logger::info("Stream transfer failed; reloading");
+				Reload();
 			}
 
 			void OnEndFile(const mpv_event_end_file& a_endFile)
@@ -888,6 +918,7 @@ namespace PiP::VideoPlayer
 			std::vector<Edition>                  _editions;
 			std::int64_t                          _currentEdition{ -1 };
 			std::chrono::steady_clock::time_point _loadedAt;
+			std::optional<std::chrono::steady_clock::time_point> _recoveredAt;  // last RecoverStream reload
 			int                 _videoWidth{ 0 };
 			int                 _videoHeight{ 0 };
 			bool                _paused{ false };

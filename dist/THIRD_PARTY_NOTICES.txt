@@ -1,4 +1,4 @@
-PiP Player bundles or is built from the following third-party software.
+SkyPiP bundles or is built from the following third-party software.
 
 libmpv (libmpv-2.dll)
   LGPL build of mpv (https://mpv.io, source: https://github.com/mpv-player/mpv) built by
