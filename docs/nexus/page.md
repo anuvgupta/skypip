@@ -8,8 +8,8 @@ play Skyrim or Enderal.
 - Works in fullscreen and windowed mode, on Windows and on a Mac with CrossOver.
 - A control panel that pauses the game while you pick a video.
 - Pauses the video while you talk to someone, and starts it again afterwards.
-- Picks up each video where you left off, even after you quit the game, and plays your last video again when you load
-  a save.
+- Picks up each video where you left off, even after you quit the game. A video still playing when you quit starts
+  again when you load a save.
 - Change the corner, size, opacity, brightness, volume, and YouTube quality any time.
 - Just an SKSE plugin: nothing to enable in your load order, nothing saved in your save files. You can add or remove it
   at any time.
@@ -97,7 +97,7 @@ Notepad. Close the game before editing it.
 
 | Setting | What it does |
 |---|---|
-| `ResumeOnStart=true` | Set to `false` to stop your last video from playing when you load a save. |
+| `ResumeOnStart=true` | Set to `false` to stop a video left playing from starting again when you load a save. |
 | `Loop=false` | Set to `true` to replay a video when it ends. |
 | `CornerRadius=6` | How rounded the video's corners are. `0` makes them square. |
 | `TogglePanel`, `TogglePause`, `ToggleVisible` | The keys. Use a key name such as `F8`, `Home`, `K`, or `Numpad5`. |

@@ -696,9 +696,13 @@ namespace PiP::VideoPlayer
 					logger::error("Playback failed: {}", reason);
 					ClearFrame();
 					SetStatus(State::Error, _ytdlError.empty() ? std::format("Could not play: {}", reason) : std::format("YouTube: {}", _ytdlError));
+					History::SetOpen(false);
+					History::Save(true);
 				} else if (a_endFile.reason != MPV_END_FILE_REASON_REDIRECT && GetStatus().state != State::Loading) {
 					ClearFrame();
 					SetStatus(State::Idle, "");
+					History::SetOpen(false);  // stopped or finished: nothing to resume next time
+					History::Save(true);
 				}
 			}
 
@@ -713,6 +717,7 @@ namespace PiP::VideoPlayer
 					}
 					if (a_id == kPosition && value > 0.0) {
 						History::Record(_currentPath, _position, _duration, _title);
+						History::SetOpen(true);
 						History::Save(false);
 					}
 					return;

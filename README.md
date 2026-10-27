@@ -83,8 +83,8 @@ bar. Click the video to pause it, or drag it to another corner.
 
 ## Picking up where you left off
 
-Every video starts where you stopped it last time. When you load a save, your last video starts playing again
-automatically. To turn that off, see [Settings file](#settings-file).
+Every video starts where you stopped it last time. If a video was playing or paused when you quit the game, it starts
+playing again automatically when you load a save. If you had stopped it, or it had finished, nothing plays. To turn that off, see [Settings file](#settings-file).
 
 ## Troubleshooting
 
@@ -104,7 +104,7 @@ Notepad. Close the game before editing it.
 
 | Setting | What it does |
 |---|---|
-| `ResumeOnStart=true` | Set to `false` to stop your last video from playing when you load a save. |
+| `ResumeOnStart=true` | Set to `false` to stop a video left playing from starting again when you load a save. |
 | `Loop=false` | Set to `true` to replay a video when it ends. |
 | `CornerRadius=6` | How rounded the video's corners are. `0` makes them square. |
 | `TogglePanel=[`, `TogglePause=]`, `ToggleVisible=\` | The keys. Use a key name such as `F8`, `Home`, `K`, or `Numpad5`. |

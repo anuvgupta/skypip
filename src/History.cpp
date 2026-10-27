@@ -13,6 +13,7 @@ namespace PiP::History
 		constexpr double      kStartGrace = 10.0;  // seconds: closer to the start than this restarts the video
 		constexpr double      kEndGrace = 15.0;    // seconds: closer to the end than this counts as finished
 		constexpr auto        kSaveInterval = std::chrono::seconds(5);
+		constexpr auto        kOpenMarker = "#open"sv;  // first line while the most recent video is open
 
 		struct Entry
 		{
@@ -26,6 +27,7 @@ namespace PiP::History
 
 		std::mutex                            g_mutex;
 		std::vector<Entry>                    g_entries;
+		bool                                  g_open{ false };
 		bool                                  g_dirty{ false };
 		std::chrono::steady_clock::time_point g_lastSave;
 
@@ -96,10 +98,15 @@ namespace PiP::History
 		}
 
 		std::vector<Entry> entries;
+		bool               open = false;
 		std::string        line;
 		while (std::getline(file, line) && entries.size() < kMaxEntries) {
 			if (!line.empty() && line.back() == '\r') {
 				line.pop_back();
+			}
+			if (line == kOpenMarker) {
+				open = entries.empty();
+				continue;
 			}
 			// position <TAB> duration <TAB> unix time <TAB> title <TAB> source (older files have no title field)
 			std::array<std::string_view, 4> fields;
@@ -131,7 +138,8 @@ namespace PiP::History
 
 		std::scoped_lock lock(g_mutex);
 		g_entries = std::move(entries);
-		logger::info("Loaded {} history entries", g_entries.size());
+		g_open = open && !g_entries.empty();
+		logger::info("Loaded {} history entries; last video {}", g_entries.size(), g_open ? "was open" : "was closed");
 	}
 
 	double ResumePosition(std::string_view a_source)
@@ -157,6 +165,21 @@ namespace PiP::History
 	{
 		std::scoped_lock lock(g_mutex);
 		return g_entries.empty() ? std::nullopt : std::optional{ g_entries.front().source };
+	}
+
+	std::optional<std::string> OpenSource()
+	{
+		std::scoped_lock lock(g_mutex);
+		return g_open && !g_entries.empty() ? std::optional{ g_entries.front().source } : std::nullopt;
+	}
+
+	void SetOpen(bool a_open)
+	{
+		std::scoped_lock lock(g_mutex);
+		if (g_open != a_open) {
+			g_open = a_open;
+			g_dirty = true;
+		}
 	}
 
 	void Record(std::string_view a_source, double a_position, double a_duration, std::string_view a_title)
@@ -205,6 +228,9 @@ namespace PiP::History
 			const auto       now = std::chrono::steady_clock::now();
 			if (!g_dirty || (!a_force && now - g_lastSave < kSaveInterval)) {
 				return;
+			}
+			if (g_open) {
+				contents += std::format("{}\n", kOpenMarker);
 			}
 			for (const auto& entry : g_entries) {
 				contents += std::format("{:.1f}\t{:.1f}\t{}\t{}\t{}\n", entry.position, entry.duration, entry.updated, entry.title, entry.source);

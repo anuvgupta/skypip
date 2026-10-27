@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.7 - 2026-10-26
+
+- When you load a save, the last video only starts again if it was still playing or paused when you quit the game. If
+  you had stopped it, or it had finished, nothing plays.
+
 ## 1.0.6 - 2026-10-26
 
 - New defaults: the video is 600 px wide (was 480), 92% opaque (was 96%), and YouTube videos play at up to 1080p

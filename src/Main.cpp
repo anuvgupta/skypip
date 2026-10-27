@@ -18,13 +18,14 @@ namespace
 		case SKSE::MessagingInterface::kPostLoadGame:
 		case SKSE::MessagingInterface::kNewGame:
 			{
-				// Resume the last video once, when play starts (not on the main menu).
+				// Resume the last video once, when play starts (not on the main menu), if it was still open when the game
+				// last closed.
 				static bool resumed = false;
 				if (resumed || !PiP::Settings::Get().resumeOnStart) {
 					break;
 				}
 				resumed = true;
-				if (auto last = PiP::History::LastSource()) {
+				if (auto last = PiP::History::OpenSource()) {
 					PiP::Overlay::SetVisible(true);
 					PiP::VideoPlayer::Play(std::move(*last));
 				}
