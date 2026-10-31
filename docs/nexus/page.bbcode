@@ -106,6 +106,21 @@ Most settings are in the control panel. A few more are in [font=Courier New]Data
 [*][b]ENB, ReShade, Community Shaders:[/b] not tested yet; let me know how it goes.
 [/list]
 
+[size=4][b]YouTube asks you to sign in[/b][/size]
+
+Sometimes YouTube refuses a video with "Sign in to confirm you're not a bot", often on a VPN or after many videos in a row. Waiting a while or pressing [b]Update yt-dlp[/b] can help. If it keeps happening, give SkyPiP the cookies of a signed-in YouTube account. SkyPiP uses them only when YouTube asks you to sign in, never for other videos.
+
+[b]Use a spare YouTube account, not your main one.[/b] YouTube can flag or ban accounts used this way. Anyone with the cookies file can use that account, so don't share it.
+
+[list=1]
+[*]Open a private window in Chrome, Edge, or Firefox and sign in to YouTube with the spare account.
+[*]Install the "Get cookies.txt LOCALLY" extension, allow it in private windows, and export youtube.com's cookies.
+[*]Close the private window without signing out. Signing out ends those cookies.
+[*]Rename the file to [font=Courier New]PiPPlayer_YouTubeCookies.txt[/font] and put it in [font=Courier New]Documents/My Games/Skyrim Special Edition/SKSE[/font] ([font=Courier New]Enderal Special Edition[/font] for Enderal), next to [font=Courier New]PiPPlayer.log[/font].
+[/list]
+
+The panel's [b]YouTube sign-in[/b] row then says "Cookies added". If YouTube asks you to sign in again later, the cookies have expired: export them again. To stop using the account, delete the file.
+
 [size=4][b]Troubleshooting[/b][/size]
 
 [list]
@@ -113,6 +128,7 @@ Most settings are in the control panel. A few more are in [font=Courier New]Data
 [*][b]A key also does something in the game.[/b] Change the key in the settings file.
 [*][b]YouTube links say I need the YouTube tools.[/b] You installed the version without YouTube; see "Adding YouTube later".
 [*][b]YouTube videos stopped playing.[/b] Open the panel and press [b]Update yt-dlp[/b].
+[*][b]YouTube says "Sign in to confirm you're not a bot".[/b] See "YouTube asks you to sign in" above.
 [*][b]The picture or the sound freezes while a video plays.[/b] Open the panel and press [b]Reload[/b]. The video loads again and continues where it was.
 [*][b]Something else.[/b] Post in the comments with the log file [font=Courier New]Documents/My Games/Skyrim Special Edition/SKSE/PiPPlayer.log[/font] attached.
 [/list]

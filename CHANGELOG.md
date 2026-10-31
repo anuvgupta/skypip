@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.9 - 2026-10-31
+
+- **YouTube sign-in:** when YouTube says "Sign in to confirm you're not a bot", SkyPiP can retry the video signed in
+  with the cookies of a YouTube account (`PiPPlayer_YouTubeCookies.txt`, next to the log). They are used only when
+  YouTube asks. Use a spare account: YouTube can flag accounts used this way. See "YouTube asks you to sign in" in the
+  README.
+- YouTube error messages show apostrophes correctly ("you're", not "you?re").
+
 ## 1.0.8 - 2026-10-26
 
 - PiP Player is now called SkyPiP, and the downloads are named `SkyPiP-<version>-with-YouTube.zip`, `SkyPiP-<version>.zip`,

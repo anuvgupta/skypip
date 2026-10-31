@@ -4,6 +4,7 @@
 #include "History.h"
 #include "Keys.h"
 #include "Overlay.h"
+#include "Paths.h"
 #include "Settings.h"
 #include "VideoPlayer.h"
 #include "YouTube.h"
@@ -402,6 +403,18 @@ namespace PiP::Panel
 				ImGui::EndCombo();
 			}
 			ImGui::SetItemTooltip("How YouTube links are looked up: Reliable always works best; Faster starts videos sooner");
+
+			Row("YouTube sign-in");
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted(YouTube::HasCookies() ? "Cookies added (used only when YouTube asks)" : "Not signed in");
+			if (const auto cookies = YouTube::CookiesPath()) {
+				ImGui::SetItemTooltip(
+					"When YouTube says \"Sign in to confirm you're not a bot\", SkyPiP can retry signed in.\n"
+					"Save a cookies.txt export of a signed-in YouTube account as\n%s\n\n"
+					"Use a spare account, not your main one: YouTube can flag or ban accounts used this way.\n"
+					"Anyone with this file can use that account, so don't share it.",
+					Paths::ToUtf8(*cookies).c_str());
+			}
 
 			ImGui::BeginDisabled(YouTube::IsUpdating());
 			if (ImGui::Button("Update yt-dlp")) {

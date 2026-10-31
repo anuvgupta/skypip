@@ -85,6 +85,32 @@ namespace PiP::YouTube
 		return path;
 	}
 
+	std::optional<std::filesystem::path> CookiesPath()
+	{
+		auto directory = SKSE::log::log_directory();
+		if (!directory) {
+			return std::nullopt;
+		}
+		return *directory / "PiPPlayer_YouTubeCookies.txt";
+	}
+
+	bool HasCookies()
+	{
+		static std::mutex                            mutex;
+		static std::chrono::steady_clock::time_point checkedAt;
+		static bool                                  present = false;
+
+		std::scoped_lock lock(mutex);
+		const auto       now = std::chrono::steady_clock::now();
+		if (checkedAt == std::chrono::steady_clock::time_point{} || now - checkedAt >= std::chrono::seconds(2)) {
+			checkedAt = now;
+			const auto      path = CookiesPath();
+			std::error_code error;
+			present = path && std::filesystem::is_regular_file(*path, error) && std::filesystem::file_size(*path, error) > 0 && !error;
+		}
+		return present;
+	}
+
 	std::string FormatFor(int a_maxHeight)
 	{
 		if (a_maxHeight <= 0) {

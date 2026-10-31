@@ -130,6 +130,17 @@ namespace PiP::VideoPlayer
 		constexpr auto kYtdlOptionsWithoutJs = "no-config=,no-js-runtimes=";
 		constexpr auto kYtdlOptionsWithJs = "no-config=,js-runtimes=quickjs";
 
+		// yt-dlp's options for a lookup, signed in with a_cookies (a cookies.txt export) when given.
+		std::string YtdlOptions(bool a_withJs, const std::optional<std::filesystem::path>& a_cookies)
+		{
+			std::string options = a_withJs ? kYtdlOptionsWithJs : kYtdlOptionsWithoutJs;
+			if (a_cookies) {
+				const auto path = Paths::ToUtf8(*a_cookies);
+				options += std::format(",cookies=%{}%{}", path.size(), path);  // %length% quotes a path with commas in it
+			}
+			return options;
+		}
+
 		// yt-dlp's reason from an "ERROR: [youtube] <id>: <reason>. <advice>" line, cut to its first sentence; empty for
 		// any other line, such as the hook's generic "youtube-dl failed: unexpected error occurred" that follows it.
 		std::string_view YtdlReason(std::string_view a_line)
@@ -148,6 +159,73 @@ namespace PiP::VideoPlayer
 				a_line = a_line.substr(0, end + 1);
 			}
 			return a_line;
+		}
+
+		// yt-dlp's reasons quote YouTube, which writes typographic punctuation ("you\u2019re"), and on Windows yt-dlp may
+		// write them in the console's code page (0x92 for U+2019) instead of UTF-8. The panel shows either as "?", so turn
+		// that punctuation into plain ASCII and read bytes that are not UTF-8 as Windows-1252.
+		std::string PlainText(std::string_view a_text)
+		{
+			const auto windows1252 = [](unsigned char a_byte) -> char32_t {
+				switch (a_byte) {
+				case 0x85: return U'\u2026';
+				case 0x91: return U'\u2018';
+				case 0x92: return U'\u2019';
+				case 0x93: return U'\u201C';
+				case 0x94: return U'\u201D';
+				case 0x96: return U'\u2013';
+				case 0x97: return U'\u2014';
+				default: return a_byte;
+				}
+			};
+
+			std::string text;
+			for (std::size_t i = 0; i < a_text.size();) {
+				const auto lead = static_cast<unsigned char>(a_text[i]);
+				const auto length = lead < 0x80 ? 1U : (lead & 0xE0) == 0xC0 ? 2U : (lead & 0xF0) == 0xE0 ? 3U : (lead & 0xF8) == 0xF0 ? 4U : 0U;
+				const bool valid = length > 0 && i + length <= a_text.size() &&
+				                   std::ranges::all_of(a_text.substr(i + 1, length - 1), [](char a_byte) { return (static_cast<unsigned char>(a_byte) & 0xC0) == 0x80; });
+
+				std::string_view encoded;  // the character as valid UTF-8, empty for a Windows-1252 byte
+				char32_t         point = 0;  // its code point where the punctuation below needs it
+				if (!valid) {
+					point = windows1252(lead);
+					i += 1;
+				} else {
+					encoded = a_text.substr(i, length);
+					if (length == 3) {
+						point = ((lead & 0x0FU) << 12) | ((static_cast<unsigned char>(encoded[1]) & 0x3FU) << 6) | (static_cast<unsigned char>(encoded[2]) & 0x3FU);
+					}
+					i += length;
+				}
+
+				switch (point) {
+				case U'\u2018':
+				case U'\u2019':
+					text += '\'';
+					break;
+				case U'\u201C':
+				case U'\u201D':
+					text += '"';
+					break;
+				case U'\u2013':
+				case U'\u2014':
+					text += '-';
+					break;
+				case U'\u2026':
+					text += "...";
+					break;
+				default:
+					if (!encoded.empty()) {
+						text += encoded;
+					} else {  // a Windows-1252 byte: Latin-1 as UTF-8
+						text += static_cast<char>(0xC0 | (point >> 6));
+						text += static_cast<char>(0x80 | (point & 0x3F));
+					}
+					break;
+				}
+			}
+			return text;
 		}
 
 		// What the player is doing before mpv reports the file loaded.
@@ -266,8 +344,8 @@ namespace PiP::VideoPlayer
 			{
 				Post([this, a_solver] {
 					_solver = a_solver;
-					if (_mpv && !_retryingWithQuickJs) {
-						ApplySolverOptions();
+					if (_mpv && !_retryingWithQuickJs && !_retryingWithCookies) {
+						ApplyYtdlOptions();
 					}
 				});
 			}
@@ -410,7 +488,7 @@ namespace PiP::VideoPlayer
 					SetOption("ytdl", "yes");
 					SetOption("script-opts", std::format("ytdl_hook-ytdl_path={}", Paths::ToUtf8(YouTube::Executable())).c_str());
 					_solver = settings.youTubeSolver;
-					SetOption("ytdl-raw-options", _solver == YouTubeSolver::Always ? kYtdlOptionsWithJs : kYtdlOptionsWithoutJs);
+					SetOption("ytdl-raw-options", YtdlOptions(_solver == YouTubeSolver::Always, std::nullopt).c_str());
 					SetOption("ytdl-format", YouTube::FormatFor(settings.youTubeMaxHeight).c_str());
 				} else {
 					logger::warn("{} is missing; YouTube links will not play", Paths::ToUtf8(YouTube::Executable()));
@@ -473,18 +551,28 @@ namespace PiP::VideoPlayer
 				_audioPlaying = false;
 			}
 
-			// Sets yt-dlp's options for the next lookup: QuickJS when the setting says always, or while retrying.
-			void ApplySolverOptions()
+			// Sets yt-dlp's options for the next lookup: QuickJS when the setting says always, or while retrying; the
+			// cookies file only while retrying a video YouTube shows only signed in, so other lookups never use the account.
+			void ApplyYtdlOptions()
 			{
-				const bool withJs = _solver == YouTubeSolver::Always || _retryingWithQuickJs;
-				RunCommand({ "set", "ytdl-raw-options", withJs ? kYtdlOptionsWithJs : kYtdlOptionsWithoutJs });
+				const bool withJs = _solver == YouTubeSolver::Always || _retryingWithQuickJs || _retryingWithCookies;
+				RunCommand({ "set", "ytdl-raw-options", YtdlOptions(withJs, _retryingWithCookies ? YouTube::CookiesPath() : std::nullopt) });
 			}
 
-			void EndQuickJsRetry()
+			// Looks the current video up again with the retry options just chosen.
+			void RetryLookup()
 			{
-				if (_retryingWithQuickJs) {
+				ApplyYtdlOptions();
+				SetStatus(State::Loading, OpeningMessage(_requestedSource));
+				LoadFile(_requestedSource, History::ResumePosition(_requestedSource));
+			}
+
+			void EndLookupRetry()
+			{
+				if (_retryingWithQuickJs || _retryingWithCookies) {
 					_retryingWithQuickJs = false;
-					ApplySolverOptions();
+					_retryingWithCookies = false;
+					ApplyYtdlOptions();
 				}
 			}
 
@@ -640,7 +728,7 @@ namespace PiP::VideoPlayer
 						}
 						break;
 					case MPV_EVENT_FILE_LOADED:
-						EndQuickJsRetry();
+						EndLookupRetry();
 						logger::info("mpv: loaded");
 						_loadedAt = std::chrono::steady_clock::now();
 						// The first picture still needs the stream connected, buffered, and decoded.
@@ -667,9 +755,9 @@ namespace PiP::VideoPlayer
 							// status, falling back to the hook's line when yt-dlp gave none.
 							if (message.log_level <= MPV_LOG_LEVEL_ERROR && std::string_view(message.prefix) == "ytdl_hook"sv) {
 								if (const auto reason = YtdlReason(text); !reason.empty()) {
-									_ytdlError = reason;
+									_ytdlError = PlainText(reason);
 								} else if (_ytdlError.empty()) {
-									_ytdlError = text;
+									_ytdlError = PlainText(text);
 								}
 							}
 							if (message.log_level <= MPV_LOG_LEVEL_ERROR && std::string_view(message.prefix) == "curl"sv &&
@@ -711,21 +799,33 @@ namespace PiP::VideoPlayer
 					History::Record(_currentPath, _duration, _duration, _title);  // finished: next time starts over
 				}
 				History::Save(true);
-				if (a_endFile.reason == MPV_END_FILE_REASON_ERROR && !_ytdlError.empty() && _solver == YouTubeSolver::Fallback &&
-					!_retryingWithQuickJs && YouTube::IsYouTubeLink(_requestedSource)) {
-					logger::info("Lookup without QuickJS failed ({}); retrying with QuickJS", _ytdlError);
-					_retryingWithQuickJs = true;
-					ApplySolverOptions();
-					SetStatus(State::Loading, OpeningMessage(_requestedSource));
-					LoadFile(_requestedSource, History::ResumePosition(_requestedSource));
-					return;
+				const bool signInAsked = _ytdlError.find("Sign in") != std::string::npos;
+				if (a_endFile.reason == MPV_END_FILE_REASON_ERROR && YouTube::IsYouTubeLink(_requestedSource)) {
+					if (signInAsked && !_retryingWithCookies && YouTube::HasCookies()) {
+						logger::info("YouTube asked to sign in ({}); retrying with the cookies file", _ytdlError);
+						_retryingWithCookies = true;
+						RetryLookup();
+						return;
+					}
+					if (!_ytdlError.empty() && _solver == YouTubeSolver::Fallback && !_retryingWithQuickJs && !_retryingWithCookies) {
+						logger::info("Lookup without QuickJS failed ({}); retrying with QuickJS", _ytdlError);
+						_retryingWithQuickJs = true;
+						RetryLookup();
+						return;
+					}
 				}
-				EndQuickJsRetry();
+				const bool triedCookies = _retryingWithCookies;
+				EndLookupRetry();
 				if (a_endFile.reason == MPV_END_FILE_REASON_ERROR) {
 					const auto* reason = _api->mpv_error_string(a_endFile.error);
 					logger::error("Playback failed: {}", reason);
 					ClearFrame();
-					SetStatus(State::Error, _ytdlError.empty() ? std::format("Could not play: {}", reason) : std::format("YouTube: {}", _ytdlError));
+					auto message = _ytdlError.empty() ? std::format("Could not play: {}", reason) : std::format("YouTube: {}", _ytdlError);
+					if (signInAsked) {
+						message += triedCookies ? " Your YouTube cookies may have expired: export them again." :
+						                          " Adding YouTube cookies can fix this: see \"YouTube asks you to sign in\" on the mod page.";
+					}
+					SetStatus(State::Error, std::move(message));
 					History::SetOpen(false);
 					History::Save(true);
 				} else if (a_endFile.reason != MPV_END_FILE_REASON_REDIRECT && GetStatus().state != State::Loading) {
@@ -906,6 +1006,7 @@ namespace PiP::VideoPlayer
 			std::string         _requestedSource;  // the last link or path passed to loadfile
 			YouTubeSolver       _solver{ YouTubeSolver::Always };
 			bool                _retryingWithQuickJs{ false };
+			bool                _retryingWithCookies{ false };  // looking a video up again signed in (YouTube::CookiesPath)
 			double              _position{ 0.0 };
 			double              _duration{ 0.0 };
 			bool                _awaitingFrame{ false };
