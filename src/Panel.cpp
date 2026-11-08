@@ -135,7 +135,7 @@ namespace PiP::Panel
 				ImGui::EndCombo();
 			}
 			ImGui::SameLine();
-			if (ImGui::Button("Resume")) {
+			if (ImGui::Button("Resume##recent")) {
 				SetUrl(selected->source);
 				VideoPlayer::Play(selected->source);
 			}
@@ -502,7 +502,7 @@ namespace PiP::Panel
 
 				ImGui::Separator();
 				ImGui::BeginDisabled(!IsLoaded(status));
-				if (ImGui::Button(status.state == State::Paused ? "Resume" : "Pause")) {
+				if (ImGui::Button(status.state == State::Paused ? "Resume##playback" : "Pause##playback")) {
 					VideoPlayer::TogglePause();
 				}
 				ImGui::SameLine();

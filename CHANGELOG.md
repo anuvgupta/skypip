@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.10 - 2026-11-08
+
+- Fixed a red "Message from Dear ImGui" box over the control panel while a video was paused.
+
 ## 1.0.9 - 2026-10-31
 
 - **YouTube sign-in:** when YouTube says "Sign in to confirm you're not a bot", SkyPiP can retry the video signed in

@@ -345,6 +345,7 @@ namespace PiP::Overlay
 		auto& io = ImGui::GetIO();
 		io.IniFilename = nullptr;
 		io.LogFilename = nullptr;
+		io.ConfigDebugHighlightIdConflicts = false;  // a programmer's notice; players must never see it in game
 
 		if (!ImGui_ImplDX11_Init(g_device, g_context)) {
 			logger::error("ImGui DX11 backend initialization failed; overlay disabled");
