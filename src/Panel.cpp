@@ -197,8 +197,26 @@ namespace PiP::Panel
 			}
 		}
 
+		// A black shade fading from a_alphaTop at the top to a_alphaBottom at the bottom, with the corners in a_corners
+		// rounded by a_rounding so it follows the video's outline. ImGui's gradient rectangle cannot round corners, so this
+		// draws a rounded rectangle and fades its vertices by height; the anti-aliased edge keeps its own (zero) alpha.
+		void DrawShade(ImDrawList* a_drawList, ImVec2 a_min, ImVec2 a_max, int a_alphaTop, int a_alphaBottom, float a_rounding,
+			ImDrawFlags a_corners)
+		{
+			const int start = a_drawList->VtxBuffer.Size;
+			a_drawList->AddRectFilled(a_min, a_max, IM_COL32_BLACK, a_rounding, a_corners);
+			const float height = std::max(a_max.y - a_min.y, 1.0F);
+			for (int i = start; i < a_drawList->VtxBuffer.Size; ++i) {
+				auto&       vertex = a_drawList->VtxBuffer[i];
+				const float t = std::clamp((vertex.pos.y - a_min.y) / height, 0.0F, 1.0F);
+				const int   edge = (vertex.col >> IM_COL32_A_SHIFT) & 0xFF;
+				const int   alpha = static_cast<int>(std::lround(std::lerp(static_cast<float>(a_alphaTop), static_cast<float>(a_alphaBottom), t)));
+				vertex.col = IM_COL32(0, 0, 0, alpha * edge / 255);
+			}
+		}
+
 		// The title along the top of the video, shortened with "..." to fit.
-		void DrawTitle(ImDrawList* a_drawList, ImVec2 a_min, ImVec2 a_max, const std::string& a_title)
+		void DrawTitle(ImDrawList* a_drawList, ImVec2 a_min, ImVec2 a_max, const std::string& a_title, float a_rounding)
 		{
 			if (a_title.empty()) {
 				return;
@@ -207,8 +225,7 @@ namespace PiP::Panel
 			const float padding = 10.0F * scale;
 			const float fontSize = ImGui::GetFontSize() * 0.95F;
 			const float shade = std::min((a_max.y - a_min.y) * 0.3F, fontSize + 2.0F * padding);
-			a_drawList->AddRectFilledMultiColor(a_min, { a_max.x, a_min.y + shade }, IM_COL32(0, 0, 0, 160), IM_COL32(0, 0, 0, 160),
-				IM_COL32(0, 0, 0, 0), IM_COL32(0, 0, 0, 0));
+			DrawShade(a_drawList, a_min, { a_max.x, a_min.y + shade }, 160, 0, a_rounding, ImDrawFlags_RoundCornersTop);
 
 			auto*       font = ImGui::GetFont();
 			const float available = a_max.x - a_min.x - 2.0F * padding;
@@ -318,10 +335,10 @@ namespace PiP::Panel
 			if (a_hasFrame && IsLoaded(status) && !g_draggingVideo) {
 				const float scale = Overlay::Scale();
 				const float shade = std::min(size.y * 0.45F, 72.0F * scale);
-				drawList->AddRectFilledMultiColor({ a_min.x, a_max.y - shade }, a_max, IM_COL32(0, 0, 0, 0), IM_COL32(0, 0, 0, 0),
-					IM_COL32(0, 0, 0, 160), IM_COL32(0, 0, 0, 160));
+				const float rounding = Settings::Get().cornerRadius;
+				DrawShade(drawList, { a_min.x, a_max.y - shade }, a_max, 0, 160, rounding, ImDrawFlags_RoundCornersBottom);
 
-				DrawTitle(drawList, a_min, a_max, status.title);
+				DrawTitle(drawList, a_min, a_max, status.title, rounding);
 
 				const ImVec2 center{ (a_min.x + a_max.x) * 0.5F, a_min.y + (size.y - shade * 0.5F) * 0.5F };
 				const float  radius = std::clamp(std::min(size.x, size.y) * 0.13F, 16.0F * scale, 44.0F * scale);

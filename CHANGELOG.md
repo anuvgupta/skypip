@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.11 - 2026-11-12
+
+- The dark shades behind the video's title and controls now follow the video's rounded corners.
+
 ## 1.0.10 - 2026-11-08
 
 - Fixed a red "Message from Dear ImGui" box over the control panel while a video was paused.
