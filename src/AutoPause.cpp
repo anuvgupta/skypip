@@ -15,6 +15,7 @@ namespace PiP::AutoPause
 		std::mutex        g_mutex;
 		bool              g_inConversation{ false };
 		bool              g_autoPaused{ false };  // the video is paused because of a conversation
+		bool              g_pausePending{ false };  // a conversation started while a video was loading: pause it once it plays
 		int               g_linesPlaying{ 0 };
 		Clock::time_point g_pausedAt;
 		Clock::time_point g_conversationEnded;
@@ -23,9 +24,22 @@ namespace PiP::AutoPause
 		// g_mutex held.
 		void PauseForConversation()
 		{
-			if (g_autoPaused || !Settings::Get().pauseForDialogue || VideoPlayer::GetStatus().state != VideoPlayer::State::Playing) {
+			if (g_autoPaused || !Settings::Get().pauseForDialogue) {
 				return;
 			}
+			const auto state = VideoPlayer::GetStatus().state;
+			if (state == VideoPlayer::State::Loading) {
+				// Nothing plays yet; Update pauses the video as soon as it does, unless the conversation is over by then.
+				if (!g_pausePending) {
+					g_pausePending = true;
+					logger::info("Will pause for a conversation once the video has loaded");
+				}
+				return;
+			}
+			if (state != VideoPlayer::State::Playing) {
+				return;
+			}
+			g_pausePending = false;
 			VideoPlayer::SetPaused(true);
 			g_autoPaused = true;
 			g_pausedAt = Clock::now();
@@ -92,23 +106,41 @@ namespace PiP::AutoPause
 	void Update()
 	{
 		std::scoped_lock lock(g_mutex);
-		if (!g_autoPaused) {
+		if (!g_autoPaused && !g_pausePending) {
 			return;
 		}
 
 		const auto now = Clock::now();
-		if (VideoPlayer::GetStatus().state != VideoPlayer::State::Paused) {
+		const auto settings = Settings::Get();
+		const bool conversationOver = !g_inConversation && settings.resumeAfterDialogue > 0 &&
+		                              now - g_conversationEnded >= std::chrono::seconds(settings.resumeAfterDialogue);
+		const bool quiet = settings.resumeAfterSilence > 0 && g_linesPlaying == 0 &&
+		                   now - g_lastLine >= std::chrono::seconds(settings.resumeAfterSilence);
+		const auto state = VideoPlayer::GetStatus().state;
+
+		if (g_pausePending) {
+			if (conversationOver || quiet) {
+				g_pausePending = false;  // it may play once loaded
+				logger::info("No longer pausing for the conversation: it {}", conversationOver ? "ended" : "went quiet");
+			} else if (state != VideoPlayer::State::Loading) {
+				g_pausePending = false;
+				if (state == VideoPlayer::State::Playing) {
+					VideoPlayer::SetPaused(true);
+					g_autoPaused = true;
+					g_pausedAt = now;
+					logger::info("Paused for a conversation once the video had loaded");
+				}
+			}
+			return;
+		}
+
+		if (state != VideoPlayer::State::Paused) {
 			if (now - g_pausedAt > kPauseSettleTime) {
 				g_autoPaused = false;  // resumed by the player, or a different video started
 			}
 			return;
 		}
 
-		const auto settings = Settings::Get();
-		const bool conversationOver = !g_inConversation && settings.resumeAfterDialogue > 0 &&
-		                              now - g_conversationEnded >= std::chrono::seconds(settings.resumeAfterDialogue);
-		const bool quiet = settings.resumeAfterSilence > 0 && g_linesPlaying == 0 &&
-		                   now - g_lastLine >= std::chrono::seconds(settings.resumeAfterSilence);
 		if (conversationOver || quiet) {
 			VideoPlayer::SetPaused(false);
 			g_autoPaused = false;

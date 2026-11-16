@@ -74,7 +74,8 @@ Open it with `[`. Everything you change here is saved automatically.
   videos may then take longer while it retries.
 - **Update yt-dlp**: press this if YouTube videos stop playing. YouTube changes often, and an update usually fixes it.
 - **Conversations**: the video pauses while you talk to someone and starts again 8 seconds after the conversation
-  ends, or once no one has spoken for 15 seconds. Change either time, or set it to off.
+  ends, or once no one has spoken for 15 seconds. Change either time, or set it to off. A video that is still
+  loading when a conversation starts waits too.
 - **Corner, Size, Opacity, Brightness, Margins**: where the video sits and how it looks.
 - **Reset to defaults**: put every setting on the panel back to how it was when you installed the mod. Your keys and
   the other settings that are only in the settings file stay as they are.

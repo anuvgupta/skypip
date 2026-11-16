@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.12 - 2026-11-16
+
+- A video that was still loading when a conversation started now waits, paused, instead of playing over the
+  conversation once it has loaded. It starts after the conversation like any other paused video.
+
 ## 1.0.11 - 2026-11-12
 
 - The dark shades behind the video's title and controls now follow the video's rounded corners.
